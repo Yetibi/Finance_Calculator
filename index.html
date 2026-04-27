@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora Financiera Personal</title>
+<style>
+  :root {
+    --navy: #1A2E42;
+    --teal: #0F766E;
+    --teal-light: #CCFBF1;
+    --amber: #B45309;
+    --amber-light: #FEF3C7;
+    --red: #B91C1C;
+    --red-light: #FEE2E2;
+    --green: #15803D;
+    --green-light: #DCFCE7;
+    --gray-50: #F8FAFC;
+    --gray-100: #F1F5F9;
+    --gray-200: #E2E8F0;
+    --gray-300: #CBD5E1;
+    --gray-400: #94A3B8;
+    --gray-500: #64748B;
+    --gray-600: #475569;
+    --gray-700: #334155;
+    --gray-800: #1E293B;
+    --text: #1E293B;
+    --border: #E2E8F0;
+    --radius: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--gray-50); color: var(--text); min-height: 100vh; }
+
+  /* LAYOUT */
+  .app { display: flex; min-height: 100vh; }
+  .sidebar { width: 260px; background: var(--navy); flex-shrink: 0; display: flex; flex-direction: column; }
+  .sidebar-brand { padding: 20px 18px 16px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .sidebar-brand h1 { font-size: 14px; font-weight: 700; color: #fff; letter-spacing: 0.02em; }
+  .sidebar-brand p { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 2px; }
+  .sidebar-menu { flex: 1; padding: 12px 0; overflow-y: auto; }
+  .menu-label { font-size: 9px; font-weight: 600; color: rgba(255,255,255,0.3); letter-spacing: 0.1em; text-transform: uppercase; padding: 12px 18px 4px; }
+  .menu-item { display: flex; align-items: flex-start; gap: 10px; padding: 9px 18px; cursor: pointer; transition: background 0.12s; border: none; background: none; width: 100%; text-align: left; }
+  .menu-item:hover { background: rgba(255,255,255,0.06); }
+  .menu-item.active { background: rgba(15,118,110,0.25); border-right: 2px solid var(--teal); }
+  .menu-num { width: 18px; height: 18px; border-radius: 4px; background: rgba(255,255,255,0.1); font-size: 10px; color: rgba(255,255,255,0.5); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+  .menu-item.active .menu-num { background: var(--teal); color: #fff; }
+  .menu-text { display: flex; flex-direction: column; gap: 2px; }
+  .menu-title { font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.75); line-height: 1.3; }
+  .menu-item.active .menu-title { color: #fff; }
+  .menu-sub { font-size: 10px; color: rgba(255,255,255,0.35); line-height: 1.2; }
+
+  .main { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+  .topbar { background: #fff; border-bottom: 1px solid var(--border); padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; }
+  .topbar-left { }
+  .topbar-title { font-size: 16px; font-weight: 600; color: var(--navy); }
+  .topbar-decision { font-size: 12px; color: var(--gray-500); margin-top: 2px; }
+  .topbar-badge { font-size: 10px; background: var(--teal-light); color: var(--teal); padding: 3px 10px; border-radius: 20px; font-weight: 500; }
+  .content { flex: 1; overflow-y: auto; padding: 24px 28px; }
+
+  /* CARDS */
+  .card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; margin-bottom: 14px; }
+  .card-title { font-size: 12px; font-weight: 600; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
+  .card-title::before { content: ''; display: block; width: 3px; height: 14px; border-radius: 2px; background: var(--teal); }
+
+  /* FORM */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 11px; font-weight: 500; color: var(--gray-600); }
+  .field .hint { font-size: 10px; color: var(--gray-400); margin-top: 1px; }
+  input[type=number], input[type=text], select {
+    width: 100%; padding: 7px 10px; font-size: 13px; border: 1px solid var(--border);
+    border-radius: 6px; background: var(--gray-50); color: var(--text); outline: none;
+    transition: border-color 0.12s, background 0.12s;
+    font-family: inherit;
+  }
+  input:focus, select:focus { border-color: var(--teal); background: #fff; }
+  select { cursor: pointer; }
+  .btn-calc {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 9px 20px; background: var(--teal); color: #fff;
+    border: none; border-radius: 6px; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: background 0.12s; margin-top: 6px;
+  }
+  .btn-calc:hover { background: #0d6b63; }
+  .btn-reset { background: transparent; border: 1px solid var(--border); color: var(--gray-500); border-radius: 6px; padding: 8px 14px; font-size: 12px; cursor: pointer; margin-top: 6px; margin-left: 8px; }
+
+  /* OUTPUTS */
+  .output-box { background: var(--gray-50); border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; margin-bottom: 10px; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+  .kpi { background: var(--gray-50); border-radius: 6px; padding: 12px; text-align: center; border: 1px solid var(--border); }
+  .kpi-label { font-size: 10px; color: var(--gray-500); margin-bottom: 4px; line-height: 1.3; }
+  .kpi-value { font-size: 17px; font-weight: 700; color: var(--navy); }
+  .kpi-sub { font-size: 10px; color: var(--gray-400); margin-top: 2px; }
+  .kpi.highlight { background: var(--teal-light); border-color: #99f6e4; }
+  .kpi.highlight .kpi-value { color: var(--teal); }
+  .kpi.warn { background: var(--amber-light); border-color: #fcd34d; }
+  .kpi.warn .kpi-value { color: var(--amber); }
+  .kpi.danger { background: var(--red-light); border-color: #fca5a5; }
+  .kpi.danger .kpi-value { color: var(--red); }
+  .kpi.success { background: var(--green-light); border-color: #86efac; }
+  .kpi.success .kpi-value { color: var(--green); }
+
+  /* RESUMEN */
+  .resumen { background: linear-gradient(135deg, #0F2027, #1A2E42); color: #fff; border-radius: var(--radius); padding: 18px 20px; }
+  .resumen-title { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+  .resumen-body { font-size: 13px; color: rgba(255,255,255,0.85); line-height: 1.7; }
+  .resumen-body strong { color: #5eead4; }
+  .resumen-body .highlight-pos { color: #86efac; font-weight: 600; }
+  .resumen-body .highlight-neg { color: #fca5a5; font-weight: 600; }
+  .resumen-body .highlight-warn { color: #fcd34d; font-weight: 600; }
+
+  /* COMPARATIVA TABLE */
+  .comp-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .comp-table th { background: var(--gray-100); color: var(--gray-600); font-weight: 600; padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+  .comp-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); color: var(--text); }
+  .comp-table tr:last-child td { border-bottom: none; }
+  .comp-table .best { background: var(--teal-light); font-weight: 600; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 600; }
+  .badge-green { background: var(--green-light); color: var(--green); }
+  .badge-red { background: var(--red-light); color: var(--red); }
+  .badge-amber { background: var(--amber-light); color: var(--amber); }
+  .badge-teal { background: var(--teal-light); color: var(--teal); }
+
+  .divider { height: 1px; background: var(--border); margin: 16px 0; }
+  .section-subtitle { font-size: 12px; font-weight: 600; color: var(--gray-700); margin-bottom: 10px; margin-top: 14px; }
+  .info-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .info-row:last-child { border-bottom: none; }
+  .info-label { color: var(--gray-500); }
+  .info-value { font-weight: 600; color: var(--navy); }
+  .debt-row { display: grid; grid-template-columns: 0.4fr 1.2fr 1fr 1fr 1fr; gap: 8px; align-items: center; margin-bottom: 6px; }
+  .prio-badge { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: var(--navy); color: #fff; font-size: 11px; font-weight: 700; }
+  .hidden { display: none; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  @media (max-width: 900px) {
+    .sidebar { width: 200px; }
+    .kpi-grid { grid-template-columns: 1fr 1fr; }
+    .form-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 680px) {
+    .sidebar { display: none; }
+    .kpi-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="sidebar">
+    <div class="sidebar-brand">
+      <h1>💰 Calculadora Financiera</h1>
+      <p>Maqueta MVP — Finanzas Personales</p>
+    </div>
+    <div class="sidebar-menu">
+      <div class="menu-label">Módulos</div>
+      <button class="menu-item active" onclick="showCalc(1,this)">
+        <span class="menu-num">1</span>
+        <span class="menu-text"><span class="menu-title">Conversión de Tasas</span><span class="menu-sub">EA · MV · ET · NA · NM</span></span>
+      </button>
+      <button class="menu-item" onclick="showCalc(2,this)">
+        <span class="menu-num">2</span>
+        <span class="menu-text"><span class="menu-title">Cuota y Costo Crédito</span><span class="menu-sub">Con / sin adelanto de capital</span></span>
+      </button>
+      <button class="menu-item" onclick="showCalc(3,this)">
+        <span class="menu-num">3</span>
+        <span class="menu-text"><span class="menu-title">Pago de Deudas</span><span class="menu-sub">Snowball vs Avalanche</span></span>
+      </button>
+      <button class="menu-item" onclick="showCalc(4,this)">
+        <span class="menu-num">4</span>
+        <span class="menu-text"><span class="menu-title">Ahorro con Propósito</span><span class="menu-sub">Meta + activo + extras</span></span>
+      </button>
+      <button class="menu-item" onclick="showCalc(5,this)">
+        <span class="menu-num">5</span>
+        <span class="menu-text"><span class="menu-title">Fondo de Emergencia</span><span class="menu-sub">Perfil de riesgo · Meta</span></span>
+      </button>
+      <button class="menu-item" onclick="showCalc(6,this)">
+        <span class="menu-num">6</span>
+        <span class="menu-text"><span class="menu-title">Libertad Financiera</span><span class="menu-sub">Plan de retiro · Simulador</span></span>
+      </button>
+      <button class="menu-item" onclick="showCalc(7,this)">
+        <span class="menu-num">7</span>
+        <span class="menu-text"><span class="menu-title">Rentabilidad Real</span><span class="menu-sub">Hasta 3 inversiones</span></span>
+      </button>
+      <button class="menu-item" onclick="showCalc(8,this)">
+        <span class="menu-num">8</span>
+        <span class="menu-text"><span class="menu-title">Compra de Vivienda</span><span class="menu-sub">Planos · Modal A y B</span></span>
+      </button>
+    </div>
+  </nav>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="topbar-title" id="topbar-title">Calculadora de Tasas Financieras</div>
+        <div class="topbar-decision" id="topbar-decision">Elegir entre productos financieros</div>
+      </div>
+      <span class="topbar-badge">MVP Excel → App</span>
+    </div>
+    <div class="content" id="content">
+      <!-- JS renders here -->
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── UTILS ───────────────────────────────────────────────────────────────────
+const fmt = (n, dec=0) => {
+  if(isNaN(n)||!isFinite(n)) return '—';
+  return new Intl.NumberFormat('es-CO',{minimumFractionDigits:dec,maximumFractionDigits:dec}).format(n);
+};
+const pct = (n, dec=2) => {
+  if(isNaN(n)||!isFinite(n)) return '—';
+  return (n*100).toFixed(dec)+'%';
+};
+const cop = (n) => {
+  if(isNaN(n)||!isFinite(n)) return '—';
+  return '$'+fmt(Math.round(n));
+};
+const v = id => { const el=document.getElementById(id); return el?el.value:''; };
+const nv = id => { const el=document.getElementById(id); return el?parseFloat(el.value)||0:0; };
+
+// ─── NAVIGATION ──────────────────────────────────────────────────────────────
+const titles = [
+  '',
+  ['Calculadora de Tasas Financieras','Elegir entre productos financieros'],
+  ['Cuota y Costo Total del Crédito','Tomar o no un crédito'],
+  ['Simulador Snowball / Avalanche','Estrategia de salida de deudas'],
+  ['Calculadora de Ahorro con Propósito','Ahorro mensual requerido'],
+  ['Fondo de Emergencia','Cuánto necesito ahorrar'],
+  ['Libertad Financiera / Plan de Retiro','Cuánto ahorrar para retirarme'],
+  ['Rentabilidad Real de Inversiones','Comparar inversiones reales'],
+  ['Planificación Compra de Vivienda en Planos','¿Cuánto apartamento puedo comprar?'],
+];
+const calcs = [null, calc1,calc2,calc3,calc4,calc5,calc6,calc7,calc8];
+let currentCalc = 1;
+
+function showCalc(n, btn) {
+  currentCalc = n;
+  document.querySelectorAll('.menu-item').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('topbar-title').textContent = titles[n][0];
+  document.getElementById('topbar-decision').textContent = titles[n][1];
+  document.getElementById('content').innerHTML = '';
+  calcs[n]();
+}
+
+// ─── CALC 1: TASAS ───────────────────────────────────────────────────────────
+function calc1() {
+  const c = document.getElementById('content');
+  c.innerHTML = `
+  <div class="card">
+    <div class="card-title">📥 Inputs</div>
+    <div class="form-grid">
+      <div class="field">
+        <label>Tasa original (%)</label>
+        <input type="number" id="t1-tasa" value="0.60" step="0.01" min="0">
+        <span class="hint">Ingresa el valor en porcentaje. Ej: 0.60 = 0.60% mensual</span>
+      </div>
+      <div class="field">
+        <label>Tipo de tasa origen</label>
+        <select id="t1-origen">
+          <option value="MV">Efectiva mensual (MV)</option>
+          <option value="EA">Efectiva anual (EA)</option>
+          <option value="ET">Efectiva trimestral (ET)</option>
+          <option value="ES">Efectiva semestral (ES)</option>
+          <option value="ED">Efectiva diaria (ED)</option>
+          <option value="NA">Nominal anual (NA)</option>
+          <option value="NM">Nominal mensual (NM)</option>
+          <option value="NT">Nominal trimestral (NT)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Tasa destino (convertir a)</label>
+        <select id="t1-destino">
+          <option value="EA">Efectiva anual (EA)</option>
+          <option value="MV">Efectiva mensual (MV)</option>
+          <option value="ET">Efectiva trimestral (ET)</option>
+          <option value="ES">Efectiva semestral (ES)</option>
+          <option value="ED">Efectiva diaria (ED)</option>
+          <option value="NA">Nominal anual (NA)</option>
+          <option value="NM">Nominal mensual (NM)</option>
+          <option value="NT">Nominal trimestral (NT)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Monto de referencia ($) — opcional</label>
+        <input type="number" id="t1-monto" value="1000000" step="100000" min="0">
+        <span class="hint">Para calcular intereses en dinero real</span>
+      </div>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px;align-items:center;">
+      <button class="btn-calc" onclick="run1()">⚡ Calcular</button>
+    </div>
+  </div>
+  <div id="t1-out" class="hidden"></div>`;
+}
+
+function toEA(r, tipo) {
+  // r en decimal
+  switch(tipo) {
+    case 'EA': return r;
+    case 'MV': return Math.pow(1+r,12)-1;
+    case 'ET': return Math.pow(1+r,4)-1;
+    case 'ES': return Math.pow(1+r,2)-1;
+    case 'ED': return Math.pow(1+r,365)-1;
+    case 'NA': return Math.pow(1+r/12,12)-1; // NA capitalizada mensual
+    case 'NM': return Math.pow(1+r,12)-1;
+    case 'NT': return Math.pow(1+r/4*4,4)-1;
+    default: return r;
+  }
+}
+function fromEA(ea, tipo) {
+  switch(tipo) {
+    case 'EA': return ea;
+    case 'MV': return Math.pow(1+ea,1/12)-1;
+    case 'ET': return Math.pow(1+ea,1/4)-1;
+    case 'ES': return Math.pow(1+ea,1/2)-1;
+    case 'ED': return Math.pow(1+ea,1/365)-1;
+    case 'NA': return 12*(Math.pow(1+ea,1/12)-1);
+    case 'NM': return Math.pow(1+ea,1/12)-1;
+    case 'NT': return 4*(Math.pow(1+ea,1/4)-1);
+    default: return ea;
+  }
+}
+function tipoLabel(t) {
+  const m={EA:'Efectiva Anual',MV:'Efectiva Mensual',ET:'Efectiva Trimestral',ES:'Efectiva Semestral',
+           ED:'Efectiva Diaria',NA:'Nominal Anual',NM:'Nominal Mensual',NT:'Nominal Trimestral'};
+  return m[t]||t;
+}
+function periodoLabel(t) {
+  const m={EA:'Anual',MV:'Mensual',ET:'Trimestral',ES:'Semestral',ED:'Diario',NA:'Anual',NM:'Mensual',NT:'Trimestral'};
+  return m[t]||t;
+}
+
+function run1() {
+  const tasaPct = nv('t1-tasa');
+  const tasa = tasaPct/100;
+  const origen = v('t1-origen');
+  const destino = v('t1-destino');
+  const monto = nv('t1-monto');
+  const ea = toEA(tasa, origen);
+  const resultado = fromEA(ea, destino);
+  const intereses = monto * resultado;
+
+  const out = document.getElementById('t1-out');
+  out.classList.remove('hidden');
+  out.innerHTML = `
+  <div class="card">
+    <div class="card-title">📤 Outputs</div>
+    <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
+      <div class="kpi"><div class="kpi-label">Tasa original</div><div class="kpi-value">${tasaPct.toFixed(4)}%</div><div class="kpi-sub">${tipoLabel(origen)}</div></div>
+      <div class="kpi highlight"><div class="kpi-label">Tasa equivalente</div><div class="kpi-value">${(resultado*100).toFixed(4)}%</div><div class="kpi-sub">${tipoLabel(destino)}</div></div>
+      <div class="kpi"><div class="kpi-label">EA equivalente (referencia)</div><div class="kpi-value">${(ea*100).toFixed(4)}%</div><div class="kpi-sub">Efectiva Anual</div></div>
+    </div>
+  </div>
+  <div class="resumen">
+    <div class="resumen-title">💬 Resumen Práctico</div>
+    <div class="resumen-body">
+      📊 <strong>CONVERSIÓN DE TASAS</strong><br>
+      📥 Tasa original: <strong>${tasaPct.toFixed(4)}%</strong> ${tipoLabel(origen)} | Periodicidad: ${periodoLabel(origen)}<br>
+      🎯 Tasa equivalente: <strong class="highlight-pos">${(resultado*100).toFixed(4)}% ${periodoLabel(destino)}</strong><br>
+      💡 Una tasa del ${tasaPct.toFixed(4)}% ${periodoLabel(origen).toLowerCase()} equivale a <strong>${(resultado*100).toFixed(4)}%</strong> ${periodoLabel(destino).toLowerCase()}<br>
+      ${monto>0?`→ Si te prestan ${cop(monto)}, pagas <strong>${cop(intereses)}</strong> de intereses por período (${periodoLabel(destino).toLowerCase()})`:''}<br>
+      → La tasa efectiva anual real es: <strong>${(ea*100).toFixed(4)}% EA</strong>
+    </div>
+  </div>`;
+}
+
+// ─── CALC 2: CREDITO ─────────────────────────────────────────────────────────
+function calc2() {
+  const c = document.getElementById('content');
+  c.innerHTML = `
+  <div class="card">
+    <div class="card-title">📥 Inputs — Crédito</div>
+    <div class="form-grid">
+      <div class="field"><label>Monto del crédito ($)</label><input type="number" id="c2-monto" value="55000000" step="1000000"></div>
+      <div class="field"><label>Tasa (%)</label><input type="number" id="c2-tasa" value="0.94" step="0.01"><span class="hint">0.94 = 0.94% (tipo depende del campo abajo)</span></div>
+      <div class="field"><label>Tipo de tasa</label>
+        <select id="c2-tipo">
+          <option value="MV">Efectiva mensual (MV)</option>
+          <option value="EA">Efectiva anual (EA)</option>
+          <option value="NA">Nominal anual (NA)</option>
+        </select>
+      </div>
+      <div class="field"><label>Plazo (meses)</label><input type="number" id="c2-plazo" value="60" step="1" min="1"></div>
+    </div>
+    <div class="divider"></div>
+    <div class="section-subtitle">⚙️ Opciones de pago (adelanto de capital)</div>
+    <div class="form-grid">
+      <div class="field"><label>¿Simular adelanto de capital?</label>
+        <select id="c2-adelanto-yn" onchange="toggleAdelanto()">
+          <option value="no">No</option>
+          <option value="si">Sí</option>
+        </select>
+      </div>
+      <div class="field hidden" id="f-adelanto-monto"><label>Monto del adelanto ($)</label><input type="number" id="c2-adelanto" value="30000000" step="1000000"></div>
+      <div class="field hidden" id="f-adelanto-cuota"><label>En qué cuota realizas el adelanto</label><input type="number" id="c2-en-cuota" value="10" min="1"></div>
+    </div>
+    <button class="btn-calc" onclick="run2()">⚡ Calcular</button>
+  </div>
+  <div id="c2-out" class="hidden"></div>`;
+}
+function toggleAdelanto() {
+  const on = v('c2-adelanto-yn')==='si';
+  document.getElementById('f-adelanto-monto').classList.toggle('hidden',!on);
+  document.getElementById('f-adelanto-cuota').classList.toggle('hidden',!on);
+}
+function run2() {
+  const monto = nv('c2-monto');
+  const tasaPct = nv('c2-tasa')/100;
+  const tipo = v('c2-tipo');
+  const plazo = nv('c2-plazo');
+  const conAdelanto = v('c2-adelanto-yn')==='si';
+  const montoAdelanto = nv('c2-adelanto');
+  const enCuota = nv('c2-en-cuota');
+
+  // Tasa mensual
+  let rm;
+  if(tipo==='MV') rm = tasaPct;
+  else if(tipo==='EA') rm = Math.pow(1+tasaPct,1/12)-1;
+  else rm = tasaPct/12; // NA
+
+  // Cuota fija
+  const cuota = monto * rm * Math.pow(1+rm,plazo) / (Math.pow(1+rm,plazo)-1);
+  const totalSin = cuota*plazo;
+  const intSin = totalSin-monto;
+  const costoPctSin = intSin/monto;
+
+  // Tabla de amortización hasta cuota k
+  let saldoK = monto;
+  let cuotaK = Math.min(enCuota, plazo);
+  for(let i=1;i<cuotaK;i++) {
+    const intPeriodo = saldoK*rm;
+    const amort = cuota - intPeriodo;
+    saldoK -= amort;
+  }
+  const saldoTrasAdelanto = Math.max(0, saldoK - montoAdelanto);
+  const restante = plazo - cuotaK;
+
+  let html2 = '';
+  if(conAdelanto && restante > 0 && saldoTrasAdelanto > 0) {
+    const nuevaCuota = saldoTrasAdelanto * rm * Math.pow(1+rm,restante) / (Math.pow(1+rm,restante)-1);
+    const totalCon = (cuotaK-1)*cuota + montoAdelanto + nuevaCuota*restante;
+    const intCon = totalCon - monto;
+    const costoPctCon = intCon/monto;
+    const cuotasAhorradas = plazo - (cuotaK-1) - restante;
+    const ahorroInt = intSin - intCon;
+
+    html2 = `
+    <div class="card">
+      <div class="card-title">📌 Con Adelanto de Capital</div>
+      <div class="kpi-grid">
+        <div class="kpi"><div class="kpi-label">Monto adelanto</div><div class="kpi-value">${cop(montoAdelanto)}</div></div>
+        <div class="kpi success"><div class="kpi-label">Nueva cuota</div><div class="kpi-value">${cop(nuevaCuota)}</div><div class="kpi-sub">/mes</div></div>
+        <div class="kpi success"><div class="kpi-label">Total intereses CON adelanto</div><div class="kpi-value">${cop(intCon)}</div><div class="kpi-sub">${pct(costoPctCon)} del crédito</div></div>
+        <div class="kpi highlight"><div class="kpi-label">Cuotas ahorradas</div><div class="kpi-value">${Math.round(cuotasAhorradas)}</div><div class="kpi-sub">cuotas</div></div>
+      </div>
+    </div>
+    <div class="resumen">
+      <div class="resumen-title">💬 Resumen Práctico</div>
+      <div class="resumen-body">
+        💰 Pidiendo prestado: <strong>${cop(monto)}</strong> | 📅 Plazo: ${plazo} cuotas | 💳 Cuota: <strong>${cop(cuota)}/mes</strong><br><br>
+        ✨ <strong>CON ADELANTO de ${cop(montoAdelanto)} en cuota #${cuotaK}:</strong><br>
+        💵 Nueva cuota: <strong>${cop(nuevaCuota)}/mes</strong> | ⏳ Cuotas ahorradas: <strong class="highlight-pos">${Math.round(cuotasAhorradas)}</strong><br><br>
+        📊 <strong>SIN adelanto:</strong><br>
+        💸 Total a pagar: <strong>${cop(totalSin)}</strong> | 🔴 Total intereses: <strong class="highlight-neg">${cop(intSin)}</strong> (${pct(costoPctSin)} del crédito)<br><br>
+        ✅ <strong>CON adelanto:</strong><br>
+        💸 Total a pagar: <strong>${cop(totalCon)}</strong> | 🟢 Total intereses: <strong class="highlight-pos">${cop(intCon)}</strong> (${pct(costoPctCon)} del crédito)<br><br>
+        🏆 <strong>Ahorro en intereses: ${cop(ahorroInt)} (${pct(ahorroInt/intSin)} menos)</strong>
+      </div>
+    </div>`;
+  } else {
+    html2 = `<div class="resumen">
+      <div class="resumen-title">💬 Resumen Práctico</div>
+      <div class="resumen-body">
+        💰 Pidiendo prestado: <strong>${cop(monto)}</strong><br>
+        📅 Plazo: <strong>${plazo} cuotas</strong> | 💳 Cuota mensual: <strong class="highlight-pos">${cop(cuota)}/mes</strong><br>
+        💸 Total a pagar: <strong>${cop(totalSin)}</strong><br>
+        🔴 Total intereses: <strong class="highlight-neg">${cop(intSin)}</strong> (${pct(costoPctSin)} del crédito)
+      </div>
+    </div>`;
+  }
+
+  const out = document.getElementById('c2-out');
+  out.classList.remove('hidden');
+  out.innerHTML = `
+  <div class="card">
+    <div class="card-title">📤 Outputs — Sin Adelanto</div>
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-label">Tasa MV equivalente</div><div class="kpi-value">${pct(rm)}</div></div>
+      <div class="kpi highlight"><div class="kpi-label">Cuota fija mensual</div><div class="kpi-value">${cop(cuota)}</div><div class="kpi-sub">/mes</div></div>
+      <div class="kpi"><div class="kpi-label">Total a pagar</div><div class="kpi-value">${cop(totalSin)}</div></div>
+      <div class="kpi danger"><div class="kpi-label">Total intereses</div><div class="kpi-value">${cop(intSin)}</div><div class="kpi-sub">${pct(costoPctSin)} del crédito</div></div>
+    </div>
+  </div>
+  ${html2}`;
+}
+
+// ─── CALC 3: SNOWBALL/AVALANCHE ───────────────────────────────────────────────
+function calc3() {
+  const c = document.getElementById('content');
+  c.innerHTML = `
+  <div class="card">
+    <div class="card-title">📥 Inputs — Deudas</div>
+    <div class="form-grid">
+      <div class="field"><label>Presupuesto mensual total para abonar ($)</label><input type="number" id="d3-presupuesto" value="1000000" step="100000"></div>
+      <div class="field"><label>Estrategia</label>
+        <select id="d3-estrategia">
+          <option value="snowball">Snowball (saldo menor primero)</option>
+          <option value="avalanche">Avalanche (mayor tasa primero)</option>
+        </select>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="section-subtitle">Deudas (hasta 5)</div>
+    <div style="overflow-x:auto">
+      <table class="comp-table" style="min-width:600px">
+        <thead><tr><th>#</th><th>Nombre</th><th>Saldo ($)</th><th>Tasa EA (%)</th><th>Cuota mínima ($)</th></tr></thead>
+        <tbody id="d3-tbody"></tbody>
+      </table>
+    </div>
+    <button class="btn-calc" onclick="run3()">⚡ Calcular</button>
+  </div>
+  <div id="d3-out" class="hidden"></div>`;
+
+  const defaults = [
+    ['Prueba 1',70000000,8,1500000],
+    ['Prueba 2',4000000,9,360000],
+    ['Prueba 3',3000000,11,330000],
+    ['Prueba 4',10000000,8.5,850000],
+    ['Prueba 5',5000000,10,500000],
+  ];
+  const tbody = document.getElementById('d3-tbody');
+  defaults.forEach((d,i) => {
+    tbody.innerHTML += `<tr>
+      <td>${i+1}</td>
+      <td><input type="text" id="d3-n${i}" value="${d[0]}" style="width:100%"></td>
+      <td><input type="number" id="d3-s${i}" value="${d[1]}" step="100000" style="width:100%"></td>
+      <td><input type="number" id="d3-t${i}" value="${d[2]}" step="0.1" style="width:80px"></td>
+      <td><input type="number" id="d3-c${i}" value="${d[3]}" step="10000" style="width:100%"></td>
+    </tr>`;
+  });
+}
+
+function run3() {
+  const presupuesto = nv('d3-presupuesto');
+  const estrategia = v('d3-estrategia');
+  let deudas = [];
+  for(let i=0;i<5;i++) {
+    const saldo = nv(`d3-s${i}`);
+    if(saldo > 0) {
+      deudas.push({
+        nombre: v(`d3-n${i}`)||`Deuda ${i+1}`,
+        saldo, tasa: nv(`d3-t${i}`)/100,
+        cuota: nv(`d3-c${i}`)
+      });
+    }
+  }
+  if(!deudas.length) return;
+
+  const totalDeuda = deudas.reduce((a,d)=>a+d.saldo,0);
+  const cuotasMin = deudas.reduce((a,d)=>a+d.cuota,0);
+  const extraDisponible = presupuesto;
+
+  // Ordenar según estrategia
+  const orden = [...deudas].map((d,i)=>({...d,idx:i})).sort((a,b)=>
+    estrategia==='snowball' ? a.saldo-b.saldo : b.tasa-a.tasa
+  );
+
+  // Calcular abonos acumulados (snowball: al pagar una, su cuota+extra va a la siguiente)
+  let abonoAcum = extraDisponible;
+  const prioList = orden.map((d,i)=>{
+    const abono = i===0 ? abonoAcum : abonoAcum;
+    const motivo = estrategia==='snowball' ? 'Saldo más bajo (victoria rápida)' : 'Mayor tasa de interés (ahorro máximo)';
+    if(i>0) abonoAcum += d.cuota;
+    return {...d, abono, motivo};
+  });
+
+  // Estimación simplificada intereses
+  const estimarIntereses = (deuda, abono) => {
+    const rm = Math.pow(1+deuda.tasa,1/12)-1;
+    const pagoTotal = deuda.cuota + abono;
+    if(pagoTotal <= 0 || rm <= 0) return {meses:999, intereses: deuda.saldo*deuda.tasa};
+    const meses = Math.ceil(Math.log(pagoTotal/(pagoTotal-deuda.saldo*rm)) / Math.log(1+rm));
+    const intereses = pagoTotal*meses - deuda.saldo;
+    return {meses: isFinite(meses)?meses:999, intereses: Math.max(0,intereses)};
+  };
+
+  const intSnow = deudas.reduce((a,d)=>{
+    const idx = orden.findIndex(o=>o.nombre===d.nombre);
+    return a + estimarIntereses(d, prioList[idx]?.abono||0).intereses;
+  },0);
+
+  // Avalanche estimado (simplificado: misma lógica, distinto orden → diferente intereses en deudas de tasa alta)
+  const ordenAv = [...deudas].sort((a,b)=>b.tasa-a.tasa);
+  let abonoAv = extraDisponible;
+  const intAval = ordenAv.reduce((a,d,i)=>{
+    const r = estimarIntereses(d, abonoAv);
+    if(i>0) abonoAv += d.cuota;
+    return a + r.intereses;
+  },0);
+
+  const mesesEst = Math.max(...deudas.map(d=>estimarIntereses(d,0).meses));
+  const mesSnow = Math.min(mesesEst, 36);
+  const mesAval = Math.min(mesesEst, 36);
+  const ahorro = Math.max(0, intSnow - intAval);
+
+  const priosHTML = prioList.map((d,i)=>`
+    <tr>
+      <td><span class="prio-badge">${i+1}</span></td>
+      <td><strong>${d.nombre}</strong></td>
+      <td>${cop(d.saldo)}</td>
+      <td>${d.motivo}</td>
+      <td>${cop(d.abono)}</td>
+    </tr>`).join('');
+
+  const out = document.getElementById('d3-out');
+  out.classList.remove('hidden');
+  out.innerHTML = `
+  <div class="card">
+    <div class="card-title">📤 Orden de Pago Recomendado — ${estrategia==='snowball'?'Snowball':'Avalanche'}</div>
+    <table class="comp-table">
+      <thead><tr><th>Prioridad</th><th>Deuda</th><th>Saldo ($)</th><th>Motivo</th><th>Abono adicional ($)</th></tr></thead>
+      <tbody>${priosHTML}</tbody>
+    </table>
+  </div>
+  <div class="card">
+    <div class="card-title">📊 Comparativa Snowball vs Avalanche</div>
+    <table class="comp-table">
+      <thead><tr><th>Métrica</th><th>Snowball</th><th>Avalanche</th><th>Diferencia</th></tr></thead>
+      <tbody>
+        <tr><td>Total deuda actual ($)</td><td>${cop(totalDeuda)}</td><td>${cop(totalDeuda)}</td><td>—</td></tr>
+        <tr><td>Cuotas mínimas mensuales ($)</td><td>${cop(cuotasMin)}</td><td>${cop(cuotasMin)}</td><td>$0</td></tr>
+        <tr><td>Intereses totales estimados ($)*</td><td>${cop(intSnow)}</td><td class="${ahorro>0?'best':''}">${cop(intAval)}</td><td>${cop(ahorro)}</td></tr>
+        <tr><td>Meses estimados para salir</td><td>${mesSnow} meses</td><td>${mesAval} meses</td><td>—</td></tr>
+        <tr><td>Ahorro Avalanche vs Snowball</td><td>—</td><td class="best">${cop(ahorro)}</td><td>—</td></tr>
+      </tbody>
+    </table>
+    <p style="font-size:11px;color:var(--gray-400);margin-top:8px;">*Estimación simplificada. El tiempo real depende de la redistribución de pagos al eliminar cada deuda.</p>
+  </div>
+  <div class="resumen">
+    <div class="resumen-title">💬 Resumen Práctico</div>
+    <div class="resumen-body">
+      🎿 <strong>Snowball:</strong> terminas en ~${mesSnow} meses | <strong class="highlight-neg">${cop(intSnow)}</strong> en intereses<br>
+      ⛰️ <strong>Avalanche:</strong> terminas en ~${mesAval} meses | <strong class="highlight-pos">${cop(intAval)}</strong> en intereses<br><br>
+      💡 En tu caso <strong class="highlight-pos">AVALANCHE</strong> te ahorra <strong>${cop(ahorro)}</strong> en intereses vs Snowball.<br>
+      Úsalo si quieres pagar menos. Usa Snowball si necesitas victorias rápidas para mantenerte motivado.
+    </div>
+  </div>`;
+}
+
+// ─── CALC 4: AHORRO CON PROPÓSITO ─────────────────────────────────────────────
+function calc4() {
+  const c = document.getElementById('content');
+  c.innerHTML = `
+  <div class="card">
+    <div class="card-title">📥 Inputs — Meta de Ahorro</div>
+    <div class="form-grid">
+      <div class="field"><label>Categoría de la meta</label>
+        <select id="a4-cat">
+          <option>Inmueble 🏠</option><option>Vehículo 🚗</option><option>Viaje ✈️</option>
+          <option>Educación 🎓</option><option>Tecnología 💻</option><option>Otro 🎯</option>
+        </select>
+      </div>
+      <div class="field"><label>Nombre de tu meta</label><input type="text" id="a4-nombre" value="Apartamento propio"></div>
+      <div class="field"><label>Valor actual de la meta ($)</label><input type="number" id="a4-valor" value="1200000000" step="10000000"></div>
+      <div class="field"><label>Ahorro inicial disponible ($)</label><input type="number" id="a4-inicial" value="200000000" step="1000000"></div>
+      <div class="field"><label>Plazo para lograr la meta (meses)</label><input type="number" id="a4-plazo" value="30" min="1"></div>
+      <div class="field"><label>Tasa de rendimiento del ahorro EA (%)</label><input type="number" id="a4-rend" value="7.44" step="0.1"><span class="hint">CDT, AFC u otro producto</span></div>
+      <div class="field"><label>Tasa variación precio de la meta EA (%) </label><input type="number" id="a4-var" value="10" step="0.5"><span class="hint">+ sube | − baja</span></div>
+      <div class="field"><label>¿Tienes un activo a vender?</label>
+        <select id="a4-activo-yn" onchange="toggleActivo4()">
+          <option value="no">No</option><option value="si">Sí</option>
+        </select>
+      </div>
+    </div>
+    <div id="a4-activo-block" class="hidden">
+      <div class="divider"></div>
+      <div class="section-subtitle">🏠 Activo actual</div>
+      <div class="form-grid">
+        <div class="field"><label>Nombre del activo</label><input type="text" id="a4-act-nombre" value="Apartamento actual"></div>
+        <div class="field"><label>Valor actual del activo ($)</label><input type="number" id="a4-act-valor" value="700000000" step="10000000"></div>
+        <div class="field"><label>Tasa variación del activo EA (%)</label><input type="number" id="a4-act-var" value="5" step="0.5"></div>
+        <div class="field"><label>¿En qué mes lo vendes?</label><input type="number" id="a4-act-mes" value="26" min="1"></div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="section-subtitle">💸 Ingreso extraordinario (opcional)</div>
+    <div class="form-grid">
+      <div class="field"><label>Descripción</label><input type="text" id="a4-ex-desc" value="Bono anual" placeholder="Ej: Bono, herencia..."></div>
+      <div class="field"><label>En qué mes llega</label><input type="number" id="a4-ex-mes" value="10" min="1"></div>
+      <div class="field"><label>Monto ($)</label><input type="number" id="a4-ex-monto" value="35000000" step="1000000"></div>
+    </div>
+    <button class="btn-calc" onclick="run4()">⚡ Calcular</button>
+  </div>
+  <div id="a4-out" class="hidden"></div>`;
+}
+function toggleActivo4() { document.getElementById('a4-activo-block').classList.toggle('hidden', v('a4-activo-yn')==='no'); }
+
+function run4() {
+  const valorHoy = nv('a4-valor');
+  const inicialHoy = nv('a4-inicial');
+  const plazo = nv('a4-plazo');
+  const rEA = nv('a4-rend')/100;
+  const varMeta = nv('a4-var')/100;
+  const rm = Math.pow(1+rEA,1/12)-1;
+
+  const valorFuturo = valorHoy * Math.pow(1+varMeta,plazo/12);
+  const inicialFuturo = inicialHoy * Math.pow(1+rEA,plazo/12);
+
+  let activoFuturo = 0;
+  const conActivo = v('a4-activo-yn')==='si';
+  if(conActivo) {
+    const actValor = nv('a4-act-valor');
+    const actVar = nv('a4-act-var')/100;
+    const actMes = nv('a4-act-mes');
+    activoFuturo = actValor * Math.pow(1+actVar,actMes/12);
+  }
+
+  const exMonto = nv('a4-ex-monto');
+  const exMes = nv('a4-ex-mes');
+  const exFuturo = exMonto > 0 ? exMonto * Math.pow(1+rEA,(plazo-exMes)/12) : 0;
+
+  const brecha = valorFuturo - inicialFuturo - activoFuturo - exFuturo;
+  const ahorroMensual = brecha > 0 ? (rm > 0 ? brecha*rm/(Math.pow(1+rm,plazo)-1) : brecha/plazo) : 0;
+  const ahorroSinPlanear = valorHoy / plazo;
+  const diferencia = ahorroSinPlanear - ahorroMensual;
+
+  const out = document.getElementById('a4-out');
+  out.classList.remove('hidden');
+  out.innerHTML = `
+  <div class="card">
+    <div class="card-title">📌 Análisis de la Meta</div>
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-label">Valor HOY</div><div class="kpi-value" style="font-size:14px">${cop(valorHoy)}</div></div>
+      <div class="kpi warn"><div class="kpi-label">Valor ajustado al vencimiento</div><div class="kpi-value" style="font-size:14px">${cop(valorFuturo)}</div><div class="kpi-sub">+${pct(varMeta*plazo/12)} acumulado</div></div>
+      ${conActivo?`<div class="kpi"><div class="kpi-label">Valor activo al vencimiento</div><div class="kpi-value" style="font-size:14px">${cop(activoFuturo)}</div></div>`:''}
+      ${exFuturo>0?`<div class="kpi"><div class="kpi-label">Ingresos futuros (val. futuro)</div><div class="kpi-value" style="font-size:14px">${cop(exFuturo)}</div></div>`:''}
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">⚡ Brecha Real y Ahorro Mensual Requerido</div>
+    <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
+      <div class="kpi danger"><div class="kpi-label">Brecha real a cubrir</div><div class="kpi-value" style="font-size:14px">${cop(Math.max(0,brecha))}</div></div>
+      <div class="kpi highlight"><div class="kpi-label">🎯 Ahorro mensual requerido</div><div class="kpi-value" style="font-size:14px">${cop(Math.max(0,ahorroMensual))}</div><div class="kpi-sub">CON ajuste + rendimiento</div></div>
+      <div class="kpi"><div class="kpi-label">Sin planear correctamente</div><div class="kpi-value" style="font-size:14px">${cop(ahorroSinPlanear)}</div><div class="kpi-sub">Ahorro extra desperdiciado: ${cop(diferencia)}</div></div>
+    </div>
+  </div>
+  <div class="resumen">
+    <div class="resumen-title">💬 Resumen Práctico</div>
+    <div class="resumen-body">
+      🎯 Meta: <strong>${v('a4-nombre')}</strong><br>
+      📌 Hoy: <strong>${cop(valorHoy)}</strong> → en ${plazo} meses: <strong class="highlight-warn">${cop(valorFuturo)}</strong><br>
+      ${conActivo?`✅ Activo futuro: <strong>${cop(activoFuturo)}</strong><br>`:''}
+      ${exFuturo>0?`💸 Ingresos futuros: <strong>${cop(exFuturo)}</strong><br>`:''}
+      ⚡ Brecha: <strong class="highlight-neg">${cop(Math.max(0,brecha))}</strong><br>
+      💰 Ahorro mensual: <strong class="highlight-pos">${cop(Math.max(0,ahorroMensual))}/mes</strong> vs ${cop(ahorroSinPlanear)}/mes si no consideras inflación, rendimientos ni activos.<br>
+      💡 <strong>Diferencia por planear bien: ${cop(diferencia)}/mes</strong>
+    </div>
+  </div>`;
+}
+
+// ─── CALC 5: FONDO EMERGENCIA ─────────────────────────────────────────────────
+function calc5() {
+  const c = document.getElementById('content');
+  c.innerHTML = `
+  <div class="card">
+    <div class="card-title">👤 Perfil de Riesgo</div>
+    <div class="form-grid">
+      <div class="field"><label>Tipo de ingreso</label>
+        <select id="e5-tipo">
+          <option value="empleado">Empleado dependiente</option>
+          <option value="independiente">Independiente / freelance</option>
+          <option value="mixto" selected>Mixto (empleo + independiente)</option>
+        </select>
+      </div>
+      <div class="field"><label>Número de dependientes</label>
+        <select id="e5-dep"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3 o más</option></select>
+      </div>
+      <div class="field"><label>Estabilidad de tu sector</label>
+        <select id="e5-estab"><option value="alta">Alta</option><option value="media" selected>Media</option><option value="baja">Baja</option></select>
+      </div>
+      <div class="field"><label>¿Tienes deudas activas?</label>
+        <select id="e5-deudas"><option value="no" selected>No</option><option value="si">Sí</option></select>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="section-subtitle">💰 Gastos Esenciales Mensuales</div>
+    <div class="form-grid">
+      <div class="field"><label>Vivienda (arriendo/hipoteca/admin/predial)</label><input type="number" id="e5-g1" value="3200000" step="100000"></div>
+      <div class="field"><label>Servicios públicos</label><input type="number" id="e5-g2" value="400000" step="50000"></div>
+      <div class="field"><label>Alimentación</label><input type="number" id="e5-g3" value="700000" step="50000"></div>
+      <div class="field"><label>Transporte</label><input type="number" id="e5-g4" value="150000" step="50000"></div>
+      <div class="field"><label>Salud y medicamentos</label><input type="number" id="e5-g5" value="500000" step="50000"></div>
+      <div class="field"><label>Educación</label><input type="number" id="e5-g6" value="0" step="100000"></div>
+      <div class="field"><label>Cuotas mínimas de deudas</label><input type="number" id="e5-g7" value="0" step="100000"></div>
+      <div class="field"><label>Seguros</label><input type="number" id="e5-g8" value="400000" step="50000"></div>
+      <div class="field"><label>Otros gastos esenciales</label><input type="number" id="e5-g9" value="190000" step="50000"></div>
+    </div>
+    <div class="divider"></div>
+    <div class="form-grid">
+      <div class="field"><label>Ahorro actual destinado a emergencias ($)</label><input type="number" id="e5-actual" value="7000000" step="500000"></div>
+      <div class="field"><label>Plazo para completar el fondo (meses)</label><input type="number" id="e5-plazo" value="9" min="1"></div>
+    </div>
+    <button class="btn-calc" onclick="run5()">⚡ Calcular</button>
+  </div>
+  <div id="e5-out" class="hidden"></div>`;
+}
+
+function run5() {
+  const tipo = v('e5-tipo');
+  const dep = parseInt(v('e5-dep'));
+  const estab = v('e5-estab');
+  const deudas = v('e5-deudas');
+  const actual = nv('e5-actual');
+  const plazo = nv('e5-plazo');
+
+  let base = tipo==='empleado'?3 : tipo==='independiente'?6 : 6;
+  let ajDep = dep===0?0 : dep===1?1 : dep===2?1 : 2;
+  let ajEstab = estab==='alta'?0 : estab==='media'?1 : 2;
+  let ajDeudas = deudas==='si'?1:0;
+  const mesesRec = base + ajDep + ajEstab + ajDeudas;
+
+  const gastos = [nv('e5-g1'),nv('e5-g2'),nv('e5-g3'),nv('e5-g4'),nv('e5-g5'),nv('e5-g6'),nv('e5-g7'),nv('e5-g8'),nv('e5-g9')];
+  const totalGastos = gastos.reduce((a,b)=>a+b,0);
+
+  const metaRec = totalGastos*mesesRec;
+  const meta6 = totalGastos*6;
+  const meta12 = totalGastos*12;
+  const meta1 = totalGastos;
+  const faltante = Math.max(0, metaRec-actual);
+  const ahorroMens = plazo>0 ? faltante/plazo : faltante;
+
+  const mesesActuales = actual/totalGastos;
+  let estado, estadoColor;
+  if(mesesActuales < 1) { estado='🔴 CRÍTICO — menos de 1 mes'; estadoColor='danger'; }
+  else if(mesesActuales < 3) { estado='🟠 FONDO BÁSICO — cubre 1 a 3 meses'; estadoColor='warn'; }
+  else if(mesesActuales < 6) { estado='🟡 EN CONSTRUCCIÓN — cubre 3 a 6 meses'; estadoColor=''; }
+  else { estado='🟢 COMPLETO — 6+ meses cubiertos'; estadoColor='success'; }
+
+  const ahora = new Date();
+  const fechaFin = new Date(ahora.setMonth(ahora.getMonth()+plazo));
+  const mesNombre = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'][fechaFin.getMonth()];
+
+  const out = document.getElementById('e5-out');
+  out.classList.remove('hidden');
+  out.innerHTML = `
+  <div class="card">
+    <div class="card-title">🗓️ Meses Recomendados: ${mesesRec} meses</div>
+    <p style="font-size:12px;color:var(--gray-500);line-height:1.7">
+      Base (${tipo}): ${base} meses | Dependientes: +${ajDep} | Estabilidad ${estab}: +${ajEstab} | Deudas: +${ajDeudas}
+    </p>
+    <p style="font-size:12px;color:var(--gray-600);margin-top:6px">Total gastos esenciales: <strong>${cop(totalGastos)}/mes</strong></p>
+  </div>
+  <div class="card">
+    <div class="card-title">🎯 Meta del Fondo de Emergencia</div>
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-label">Meta mínima — 1 mes</div><div class="kpi-value" style="font-size:14px">${cop(meta1)}</div></div>
+      <div class="kpi highlight"><div class="kpi-label">Meta recomendada — ${mesesRec} meses</div><div class="kpi-value" style="font-size:14px">${cop(metaRec)}</div></div>
+      <div class="kpi"><div class="kpi-label">Meta estándar — 6 meses</div><div class="kpi-value" style="font-size:14px">${cop(meta6)}</div></div>
+      <div class="kpi"><div class="kpi-label">Meta máxima — 12 meses</div><div class="kpi-value" style="font-size:14px">${cop(meta12)}</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">📊 Estado Actual + Plan</div>
+    <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
+      <div class="kpi ${estadoColor}"><div class="kpi-label">Ya tienes ahorrado</div><div class="kpi-value" style="font-size:15px">${cop(actual)}</div><div class="kpi-sub">${mesesActuales.toFixed(1)} meses cubiertos</div></div>
+      <div class="kpi danger"><div class="kpi-label">Te falta</div><div class="kpi-value" style="font-size:15px">${cop(faltante)}</div></div>
+      <div class="kpi success"><div class="kpi-label">Ahorro mensual requerido</div><div class="kpi-value" style="font-size:15px">${cop(ahorroMens)}</div><div class="kpi-sub">En ${plazo} meses</div></div>
+    </div>
+    <div class="info-row" style="margin-top:10px"><span class="info-label">🚦 Estado de salud del fondo</span><span class="info-value">${estado}</span></div>
+    <div class="info-row"><span class="info-label">📅 Fecha estimada de fondo completo</span><span class="info-value">${mesNombre} ${fechaFin.getFullYear()}</span></div>
+  </div>
+  <div class="resumen">
+    <div class="resumen-title">💬 Resumen Práctico</div>
+    <div class="resumen-body">
+      👤 Perfil: <strong>${tipo}</strong> | ${dep} dependiente(s) | Sector ${estab}<br>
+      📊 Gastos esenciales: <strong>${cop(totalGastos)}/mes</strong> | Meta recomendada: <strong>${mesesRec} meses</strong><br>
+      🎯 Tu meta de fondo: <strong class="highlight-warn">${cop(metaRec)}</strong><br>
+      💵 Ya tienes: <strong>${cop(actual)}</strong> | 🚦 Estado: ${estado}<br>
+      💰 Debes ahorrar <strong class="highlight-pos">${cop(ahorroMens)}/mes</strong> para completarlo en ${plazo} meses.<br>
+      📅 Fecha estimada: <strong>${mesNombre} ${fechaFin.getFullYear()}</strong><br>
+      ⚠️ Sin fondo, cualquier emergencia te lleva a deudas. ¡Empieza hoy!
+    </div>
+  </div>`;
+}
+
+// ─── CALC 6: LIBERTAD FINANCIERA ─────────────────────────────────────────────
+function calc6() {
+  const c = document.getElementById('content');
+  c.innerHTML = `
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title">👤 Tu Perfil Actual</div>
+      <div class="field" style="margin-bottom:10px"><label>Edad actual (años)</label><input type="number" id="l6-edad" value="30" min="18"></div>
+      <div class="field" style="margin-bottom:10px"><label>Edad deseada de retiro</label><input type="number" id="l6-retiro" value="55"></div>
+      <div class="field" style="margin-bottom:10px"><label>Esperanza de vida (años)</label><input type="number" id="l6-vida" value="85"></div>
+      <div class="card-title" style="margin-top:14px">💰 Situación Financiera</div>
+      <div class="field" style="margin-bottom:10px"><label>Gasto mensual deseado en retiro ($)</label><input type="number" id="l6-gasto" value="5000000" step="500000"></div>
+      <div class="field" style="margin-bottom:10px"><label>Ahorro/inversión acumulado hoy ($)</label><input type="number" id="l6-ahorro" value="100000000" step="5000000"></div>
+      <div class="field" style="margin-bottom:10px"><label>Pensión esperada del sistema ($/mes)</label><input type="number" id="l6-pension" value="2000000" step="100000"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">⚙️ Parámetros Económicos</div>
+      <div class="field" style="margin-bottom:10px"><label>Rentabilidad inversiones EA (%)</label><input type="number" id="l6-rend" value="9" step="0.5"></div>
+      <div class="field" style="margin-bottom:10px"><label>Inflación esperada EA (%)</label><input type="number" id="l6-inf" value="5" step="0.5"></div>
+      <div class="field" style="margin-bottom:10px"><label>Rentabilidad en retiro EA (%)</label><input type="number" id="l6-rendret" value="4" step="0.5"></div>
+      <div class="card-title" style="margin-top:14px">🏠 Patrimonio Improductivo</div>
+      <div class="field" style="margin-bottom:10px"><label>Vivienda deseada al retiro ($)</label><input type="number" id="l6-viv-des" value="900000000" step="10000000"></div>
+      <div class="field" style="margin-bottom:10px"><label>Vivienda actual HOY ($)</label><input type="number" id="l6-viv-act" value="270000000" step="5000000"></div>
+      <div class="field" style="margin-bottom:10px"><label>Valorización anual vivienda (%)</label><input type="number" id="l6-viv-var" value="5" step="0.5"></div>
+      <div class="field" style="margin-bottom:10px"><label>Brecha otros activos ($)</label><input type="number" id="l6-otros" value="50000000" step="5000000"></div>
+    </div>
+  </div>
+  <div style="margin-bottom:14px"><button class="btn-calc" onclick="run6()">⚡ Calcular Plan de Retiro</button></div>
+  <div id="l6-out" class="hidden"></div>`;
+}
+
+function run6() {
+  const edad = nv('l6-edad'), retiro = nv('l6-retiro'), vida = nv('l6-vida');
+  const gastoMens = nv('l6-gasto'), ahorroHoy = nv('l6-ahorro'), pension = nv('l6-pension');
+  const rendEA = nv('l6-rend')/100, infEA = nv('l6-inf')/100, rendRet = nv('l6-rendret')/100;
+  const vivDes = nv('l6-viv-des'), vivAct = nv('l6-viv-act'), vivVar = nv('l6-viv-var')/100;
+  const otros = nv('l6-otros');
+
+  const anosAcum = retiro - edad;
+  const anosRetiro = vida - retiro;
+  const mesesAcum = anosAcum * 12, mesesRetiro = anosRetiro * 12;
+
+  // Tasas reales
+  const rRealAcum = (1+rendEA)/(1+infEA)-1;
+  const rRealMens = Math.pow(1+rRealAcum,1/12)-1;
+  const rRetMens = (1+rendRet)/(1+infEA)-1; // puede ser negativo
+
+  // Brecha patrimonio
+  const vivFutActual = vivAct * Math.pow(1+vivVar,anosAcum);
+  const brechaViv = vivDes - vivFutActual;
+  const brechaTotal = Math.max(0,brechaViv) + otros;
+
+  // Capital productivo (anualidad)
+  const brechaMens = gastoMens - pension;
+  let capitalProd;
+  if(Math.abs(rRetMens) < 0.0001) {
+    capitalProd = brechaMens * mesesRetiro;
+  } else {
+    capitalProd = brechaMens * (1 - Math.pow(1+rRetMens,-mesesRetiro)) / rRetMens;
+  }
+
+  const capitalTotal = capitalProd + brechaTotal;
+  const VFahorro = ahorroHoy * Math.pow(1+rRealMens,mesesAcum);
+  const faltante = Math.max(0, capitalTotal - VFahorro);
+  const ahorroMens = rRealMens > 0 ? faltante*rRealMens/(Math.pow(1+rRealMens,mesesAcum)-1) : faltante/mesesAcum;
+  const ahorroSinRend = capitalTotal / mesesAcum;
+  const diferencia = ahorroSinRend - ahorroMens;
+  const pctMeta = VFahorro/capitalTotal;
+
+  let estado, ec;
+  if(pctMeta < 0.1) { estado='🔴 URGENTE — necesitas empezar a ahorrar YA'; ec='danger'; }
+  else if(pctMeta < 0.5) { estado='🟠 EN PROGRESO — vas por buen camino'; ec='warn'; }
+  else if(pctMeta < 0.9) { estado='🟡 BIEN ENCAMINADO — mantén el ritmo'; ec=''; }
+  else { estado='🟢 EXCELENTE — estás en la recta final'; ec='success'; }
+
+  const anioRetiro = new Date().getFullYear() + anosAcum;
+
+  const out = document.getElementById('l6-out');
+  out.classList.remove('hidden');
+  out.innerHTML = `
+  <div class="card">
+    <div class="card-title">⏱️ Horizonte Temporal</div>
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-label">Años para acumular</div><div class="kpi-value">${anosAcum}</div><div class="kpi-sub">${mesesAcum} meses</div></div>
+      <div class="kpi"><div class="kpi-label">Años de retiro</div><div class="kpi-value">${anosRetiro}</div><div class="kpi-sub">${mesesRetiro} meses</div></div>
+      <div class="kpi"><div class="kpi-label">Año estimado de retiro</div><div class="kpi-value">${anioRetiro}</div></div>
+      <div class="kpi ${ec}"><div class="kpi-label">Progreso actual</div><div class="kpi-value">${pct(pctMeta)}</div><div class="kpi-sub">de la meta acumulado</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">🎯 Capital Necesario al Retiro</div>
+    <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
+      <div class="kpi"><div class="kpi-label">Capital productivo (renta)</div><div class="kpi-value" style="font-size:13px">${cop(capitalProd)}</div></div>
+      <div class="kpi"><div class="kpi-label">Brecha patrimonio improductivo</div><div class="kpi-value" style="font-size:13px">${cop(brechaTotal)}</div></div>
+      <div class="kpi danger"><div class="kpi-label">🎯 CAPITAL TOTAL NECESARIO</div><div class="kpi-value" style="font-size:13px">${cop(capitalTotal)}</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">💰 Plan de Ahorro Mensual</div>
+    <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
+      <div class="kpi"><div class="kpi-label">VF de tu ahorro actual al retiro</div><div class="kpi-value" style="font-size:13px">${cop(VFahorro)}</div></div>
+      <div class="kpi highlight"><div class="kpi-label">🎯 Ahorro mensual requerido</div><div class="kpi-value" style="font-size:14px">${cop(ahorroMens)}</div><div class="kpi-sub">pesos de HOY</div></div>
+      <div class="kpi success"><div class="kpi-label">💡 Diferencia por invertir</div><div class="kpi-value" style="font-size:13px">${cop(diferencia)}</div><div class="kpi-sub">vs no invertir</div></div>
+    </div>
+  </div>
+  <div class="resumen">
+    <div class="resumen-title">💬 Resumen Práctico</div>
+    <div class="resumen-body">
+      🏖️ Plan de Retiro a los <strong>${retiro} años</strong> (${anioRetiro})<br>
+      🎯 Capital TOTAL necesario: <strong class="highlight-warn">${cop(capitalTotal)}</strong> (pesos de hoy)<br>
+      💰 Productivo (renta): ${cop(capitalProd)} | 🏠 Improductivo: ${cop(brechaTotal)}<br>
+      💵 Ya tienes: <strong>${cop(ahorroHoy)}</strong> (${pct(pctMeta)} de tu meta)<br>
+      ⚡ Te falta: <strong class="highlight-neg">${cop(faltante)}</strong><br>
+      💰 Ahorro mensual requerido: <strong class="highlight-pos">${cop(ahorroMens)}/mes</strong> vs <strong>${cop(ahorroSinRend)}/mes</strong> sin rendimientos<br>
+      (¡Ahorras <strong class="highlight-pos">${cop(diferencia)}/mes</strong> por invertir inteligentemente!)<br>
+      🚦 Estado: ${estado}
+    </div>
+  </div>`;
+}
+
+// ─── CALC 7: RENTABILIDAD REAL ────────────────────────────────────────────────
+function calc7() {
+  const c = document.getElementById('content');
+  c.innerHTML = `
+  <div class="card">
+    <div class="card-title">⚙️ Parámetros Generales</div>
+    <div class="form-grid">
+      <div class="field"><label>Monto a invertir ($)</label><input type="number" id="r7-monto" value="50000000" step="1000000"></div>
+      <div class="field"><label>Plazo de inversión (meses)</label><input type="number" id="r7-plazo" value="12" min="1"></div>
+      <div class="field"><label>Inflación esperada anual (%)</label><input type="number" id="r7-inf" value="5" step="0.5"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">📊 Alternativas de Inversión (compara hasta 3)</div>
+    <div class="form-grid-3">
+      <div><strong style="font-size:12px;color:var(--navy)">Inversión A</strong></div>
+      <div><strong style="font-size:12px;color:var(--navy)">Inversión B</strong></div>
+      <div><strong style="font-size:12px;color:var(--navy)">Inversión C</strong></div>
+    </div>
+    <div class="form-grid-3" style="margin-top:8px">
+      <div class="field"><label>Nombre</label><input type="text" id="r7-nA" value="CDT Bancolombia"></div>
+      <div class="field"><label>Nombre</label><input type="text" id="r7-nB" value="Fondo Renta Fija"></div>
+      <div class="field"><label>Nombre</label><input type="text" id="r7-nC" value="Bolsa (acciones)"></div>
+      <div class="field"><label>Tasa bruta EA (%)</label><input type="number" id="r7-tA" value="11" step="0.5"></div>
+      <div class="field"><label>Tasa bruta EA (%)</label><input type="number" id="r7-tB" value="9" step="0.5"></div>
+      <div class="field"><label>Tasa bruta EA (%)</label><input type="number" id="r7-tC" value="17" step="0.5"></div>
+      <div class="field"><label>Retención fuente (%)</label><input type="number" id="r7-rA" value="4" step="0.5"></div>
+      <div class="field"><label>Retención fuente (%)</label><input type="number" id="r7-rB" value="4" step="0.5"></div>
+      <div class="field"><label>Retención fuente (%)</label><input type="number" id="r7-rC" value="1" step="0.5"></div>
+      <div class="field"><label>Comisión admin EA (%)</label><input type="number" id="r7-cA" value="0" step="0.1"></div>
+      <div class="field"><label>Comisión admin EA (%)</label><input type="number" id="r7-cB" value="1.2" step="0.1"></div>
+      <div class="field"><label>Comisión admin EA (%)</label><input type="number" id="r7-cC" value="1.5" step="0.1"></div>
+      <div class="field"><label>Otros costos fijos ($)</label><input type="number" id="r7-oA" value="0" step="10000"></div>
+      <div class="field"><label>Otros costos fijos ($)</label><input type="number" id="r7-oB" value="50000" step="10000"></div>
+      <div class="field"><label>Otros costos fijos ($)</label><input type="number" id="r7-oC" value="300000" step="10000"></div>
+      <div class="field"><label>¿Exento impuestos? (AFC/FPV)</label><select id="r7-eA"><option value="no">No</option><option value="si">Sí</option></select></div>
+      <div class="field"><label>¿Exento impuestos?</label><select id="r7-eB"><option value="no">No</option><option value="si">Sí</option></select></div>
+      <div class="field"><label>¿Exento impuestos?</label><select id="r7-eC"><option value="no">No</option><option value="si">Sí</option></select></div>
+      <div class="field"><label>Nivel de riesgo</label>
+        <select id="r7-lA"><option>Bajo</option><option>Bajo-Medio</option><option>Medio</option><option>Alto</option></select>
+      </div>
+      <div class="field"><label>Nivel de riesgo</label>
+        <select id="r7-lB"><option>Bajo</option><option value="bm" selected>Bajo-Medio</option><option>Medio</option><option>Alto</option></select>
+      </div>
+      <div class="field"><label>Nivel de riesgo</label>
+        <select id="r7-lC"><option>Bajo</option><option>Bajo-Medio</option><option>Medio</option><option>Alto</option></select>
+      </div>
+    </div>
+    <button class="btn-calc" onclick="run7()">⚡ Calcular Rentabilidad Real</button>
+  </div>
+  <div id="r7-out" class="hidden"></div>`;
+}
+
+function run7() {
+  const monto = nv('r7-monto');
+  const plazo = nv('r7-plazo');
+  const inf = nv('r7-inf')/100;
+  const infPlazo = Math.pow(1+inf,plazo/12)-1;
+
+  const invs = ['A','B','C'].map(k=>({
+    nombre: v(`r7-n${k}`)||`Inversión ${k}`,
+    tasa: nv(`r7-t${k}`)/100,
+    ret: nv(`r7-r${k}`)/100,
+    com: nv(`r7-c${k}`)/100,
+    otros: nv(`r7-o${k}`),
+    exento: v(`r7-e${k}`)==='si',
+    riesgo: v(`r7-l${k}`),
+  }));
+
+  const resultados = invs.map(inv => {
+    const tasaPlazo = Math.pow(1+inv.tasa,plazo/12)-1;
+    const bruto = monto*tasaPlazo;
+    const retencion = inv.exento ? 0 : bruto*inv.ret;
+    const comision = monto*Math.pow(1+inv.com,plazo/12)-monto;
+    const totalDesc = retencion+comision+inv.otros;
+    const netaNom = bruto-totalDesc;
+    const pctNeta = netaNom/monto;
+    const perdidaInf = monto*infPlazo;
+    const gReal = netaNom-perdidaInf;
+    const pctReal = gReal/monto;
+    return {...inv, bruto, retencion, comision, totalDesc, netaNom, pctNeta, perdidaInf, gReal, pctReal};
+  });
+
+  const bestIdx = resultados.reduce((bi,r,i)=>r.pctReal>resultados[bi].pctReal?i:bi,0);
+  const sorted = [...resultados].map((r,i)=>({...r,idx:i})).sort((a,b)=>b.pctReal-a.pctReal);
+  const ranking = resultados.map((_,i)=>sorted.findIndex(s=>s.idx===i)+1);
+
+  const medals = ['🥇','🥈','🥉'];
+
+  const out = document.getElementById('r7-out');
+  out.classList.remove('hidden');
+
+  const rows = [
+    ['Ganancia bruta ($)', r=>cop(r.bruto)],
+    ['(-) Retención fuente ($)', r=>cop(r.retencion)],
+    ['(-) Comisión admin ($)', r=>cop(r.comision)],
+    ['(-) Otros costos ($)', r=>cop(r.otros)],
+    ['Ganancia NETA nominal ($)', r=>`<strong>${cop(r.netaNom)}</strong>`],
+    ['Rentabilidad neta EA (%)', r=>pct(r.pctNeta)],
+    ['Pérdida por inflación ($)', r=>cop(r.perdidaInf)],
+    ['Ganancia REAL ($)', r=>`<strong style="color:var(--teal)">${cop(r.gReal)}</strong>`],
+    ['🎯 Rentabilidad REAL EA (%)', r=>`<strong>${pct(r.pctReal)}</strong>`],
+    ['Ranking', (_,i)=>medals[ranking[i]-1]||ranking[i]+'º'],
+    ['¿Tu dinero crece?', r=>r.gReal>0?'<span class="badge badge-green">🟢 SÍ</span>':'<span class="badge badge-red">🔴 NO</span>'],
+  ];
+
+  const tableRows = rows.map(([label,fn])=>`
+    <tr>
+      <td class="info-label">${label}</td>
+      ${resultados.map((r,i)=>`<td class="${ranking[i]===1?'best':''}">${fn(r,i)}</td>`).join('')}
+    </tr>`).join('');
+
+  out.innerHTML = `
+  <div class="card">
+    <div class="card-title">💵 Comparativa de Rentabilidad</div>
+    <table class="comp-table">
+      <thead><tr><th>Métrica</th>${resultados.map(r=>`<th>${r.nombre}</th>`).join('')}</tr></thead>
+      <tbody>
+        <tr><td>Monto invertido</td>${resultados.map(()=>`<td>${cop(monto)}</td>`).join('')}</tr>
+        <tr><td>Plazo</td>${resultados.map(()=>`<td>${plazo} meses</td>`).join('')}</tr>
+        <tr><td>Nivel de riesgo</td>${resultados.map(r=>`<td>${r.riesgo}</td>`).join('')}</tr>
+        ${tableRows}
+      </tbody>
+    </table>
+  </div>
+  <div class="resumen">
+    <div class="resumen-title">💬 Resumen Práctico — Ranking por Rentabilidad Real</div>
+    <div class="resumen-body">
+      💰 Invirtiendo <strong>${cop(monto)}</strong> por <strong>${plazo} meses</strong><br><br>
+      ${sorted.map((r,i)=>`${medals[i]} <strong>${r.nombre}</strong>: Rinde <strong>${pct(r.pctNeta)}</strong> neto nominal → <strong class="${r.gReal>0?'highlight-pos':'highlight-neg'}">${pct(r.pctReal)}</strong> real | ${cop(r.gReal)} de ganancia real`).join('<br>')}
+      <br><br>🏆 <strong>GANADOR: ${resultados[bestIdx].nombre}</strong> con ${pct(resultados[bestIdx].pctReal)} real EA<br>
+      ⚠️ Mayor rentabilidad = mayor riesgo. Evalúa tu tolerancia antes de decidir.
+    </div>
+  </div>`;
+}
+
+// ─── CALC 8: VIVIENDA EN PLANOS ───────────────────────────────────────────────
+function calc8() {
+  const c = document.getElementById('content');
+  c.innerHTML = `
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title">⚙️ Parámetros Generales</div>
+      <div class="field" style="margin-bottom:10px"><label>Ingresos mensuales ($)</label><input type="number" id="v8-ing" value="15000000" step="500000"></div>
+      <div class="field" style="margin-bottom:10px"><label>% máximo cuota hipotecaria</label><input type="number" id="v8-pct" value="30" step="1"><span class="hint">Regla sana: 30%</span></div>
+      <div class="field" style="margin-bottom:10px"><label>% cuota inicial sobre valor</label><input type="number" id="v8-pci" value="30" step="5"></div>
+      <div class="field" style="margin-bottom:10px"><label>Plazo cuota inicial (meses)</label><input type="number" id="v8-mci" value="36" step="6"></div>
+      <div class="field" style="margin-bottom:10px"><label>Tasa crédito hipotecario EA (%)</label><input type="number" id="v8-tea" value="12" step="0.5"></div>
+      <div class="field" style="margin-bottom:10px"><label>Plazo crédito hipotecario (años)</label><input type="number" id="v8-anos" value="15" step="5"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">💰 Otros Parámetros</div>
+      <div class="field" style="margin-bottom:10px"><label>Valorización inmueble EA (%)</label><input type="number" id="v8-val" value="8" step="0.5"></div>
+      <div class="field" style="margin-bottom:10px"><label>Inflación EA (%)</label><input type="number" id="v8-inf" value="5" step="0.5"></div>
+      <div class="field" style="margin-bottom:10px"><label>Gastos escrituración (% del valor)</label><input type="number" id="v8-esc" value="3" step="0.5"></div>
+      <div class="field" style="margin-bottom:10px"><label>Seguro + admin mensual ($)</label><input type="number" id="v8-adm" value="900000" step="50000"></div>
+      <div class="field" style="margin-bottom:10px"><label>Dinero ya ahorrado cuota inicial ($)</label><input type="number" id="v8-ahorrado" value="0" step="1000000"></div>
+      <div class="divider"></div>
+      <div class="card-title">🔄 Modalidad B — Inmueble en mente</div>
+      <div class="field" style="margin-bottom:10px"><label>Valor del inmueble que deseas ($)</label><input type="number" id="v8-deseado" value="300000000" step="10000000"></div>
+    </div>
+  </div>
+  <div style="margin-bottom:14px"><button class="btn-calc" onclick="run8()">⚡ Calcular</button></div>
+  <div id="v8-out" class="hidden"></div>`;
+}
+
+function run8() {
+  const ing = nv('v8-ing');
+  const pctMax = nv('v8-pct')/100;
+  const pctCI = nv('v8-pci')/100;
+  const mCI = nv('v8-mci');
+  const teaHip = nv('v8-tea')/100;
+  const anosHip = nv('v8-anos');
+  const valorizacion = nv('v8-val')/100;
+  const esc = nv('v8-esc')/100;
+  const adm = nv('v8-adm');
+  const ahorrado = nv('v8-ahorrado');
+  const deseado = nv('v8-deseado');
+
+  const rm = Math.pow(1+teaHip,1/12)-1;
+  const nHip = anosHip*12;
+  const pctSeguros = 0.08;
+  const pctFinanciado = 1-pctCI;
+
+  // Modalidad A
+  const cuotaMax = ing*pctMax;
+  const cuotaAmort = cuotaMax/(1+pctSeguros);
+  const valorMax = cuotaAmort*(Math.pow(1+rm,nHip)-1)/(rm*Math.pow(1+rm,nHip));
+  const valorMaxFin = valorMax/pctFinanciado;
+  const cuotaInicial = valorMaxFin*pctCI;
+  const ahorroMensCI = Math.max(0,(cuotaInicial-ahorrado)/mCI);
+  const gastosEsc = valorMaxFin*esc;
+  const credito = valorMaxFin*pctFinanciado;
+
+  // Valorización inmueble en plazo del crédito
+  const valorFuturo = valorMaxFin*Math.pow(1+valorizacion,anosHip);
+  const totalDesembolsado = cuotaInicial + cuotaMax*nHip + gastosEsc;
+  const gananciaNet = valorFuturo - totalDesembolsado;
+
+  // Modalidad B
+  const ciDesB = deseado*pctCI;
+  const ahorroMensB = ciDesB/mCI;
+  const creditoB = deseado*pctFinanciado;
+  const cuotaB = creditoB*rm*Math.pow(1+rm,nHip)/(Math.pow(1+rm,nHip)-1);
+  const cuotaConSegB = cuotaB*(1+pctSeguros);
+  const pctIngB = cuotaConSegB/ing;
+  const viable = pctIngB <= pctMax;
+  const ingMinCI = ahorroMensB/pctMax;
+  const ingMinCred = cuotaConSegB/pctMax;
+  const escDeseado = deseado*esc;
+  const costoMensB = cuotaConSegB + adm;
+
+  // Escenarios 30/40/50
+  const escenarios = [30,40,50].map(pCI=>{
+    const pF = 1-pCI/100;
+    const cI = valorMaxFin*(pCI/100);
+    const cred2 = valorMaxFin*pF;
+    const cMaxEsc = cuotaMax*(1+pctSeguros);
+    const aCI = Math.max(0,(cI-ahorrado)/mCI);
+    const gasEsc = valorMaxFin*esc;
+    const totalPag = cI + cuotaMax*nHip + gasEsc;
+    const valF10 = valorMaxFin*Math.pow(1+valorizacion,10);
+    return {pCI, cI, aCI, cuotaMax, totalPag, valF10};
+  });
+
+  const out = document.getElementById('v8-out');
+  out.classList.remove('hidden');
+  out.innerHTML = `
+  <div class="card">
+    <div class="card-title">🏠 Modalidad A — ¿Qué apartamento puedo comprar?</div>
+    <div class="kpi-grid">
+      <div class="kpi highlight"><div class="kpi-label">🎯 VALOR MÁXIMO INMUEBLE</div><div class="kpi-value" style="font-size:14px">${cop(valorMaxFin)}</div></div>
+      <div class="kpi"><div class="kpi-label">Crédito hipotecario</div><div class="kpi-value" style="font-size:14px">${cop(credito)}</div></div>
+      <div class="kpi"><div class="kpi-label">Cuota mensual banco</div><div class="kpi-value" style="font-size:14px">${cop(cuotaMax)}</div><div class="kpi-sub">${pct(pctMax)} de ingresos</div></div>
+      <div class="kpi warn"><div class="kpi-label">Cuota inicial total</div><div class="kpi-value" style="font-size:14px">${cop(cuotaInicial)}</div></div>
+    </div>
+    <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
+      <div class="kpi"><div class="kpi-label">Ahorro mensual cuota inicial</div><div class="kpi-value">${cop(ahorroMensCI)}</div><div class="kpi-sub">${pct(ahorroMensCI/ing)} de ingresos</div></div>
+      <div class="kpi"><div class="kpi-label">Gastos escrituración</div><div class="kpi-value">${cop(gastosEsc)}</div></div>
+      <div class="kpi success"><div class="kpi-label">Ganancia patrimonial (${anosHip} años)</div><div class="kpi-value">${cop(gananciaNet)}</div><div class="kpi-sub">${pct(gananciaNet/totalDesembolsado)} sobre inversión</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">🔄 Modalidad B — Para el inmueble de ${cop(deseado)}</div>
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-label">Cuota inicial (${pctCI*100}%)</div><div class="kpi-value" style="font-size:14px">${cop(ciDesB)}</div></div>
+      <div class="kpi"><div class="kpi-label">Ahorro mensual cuota inicial</div><div class="kpi-value" style="font-size:14px">${cop(ahorroMensB)}</div><div class="kpi-sub">${mCI} meses construcción</div></div>
+      <div class="kpi"><div class="kpi-label">Cuota hipotecaria (con seguros)</div><div class="kpi-value" style="font-size:14px">${cop(cuotaConSegB)}</div><div class="kpi-sub">${pct(pctIngB)} de ingresos</div></div>
+      <div class="kpi ${viable?'success':'danger'}"><div class="kpi-label">¿Viable?</div><div class="kpi-value">${viable?'🟢 VIABLE':'🔴 NO VIABLE'}</div><div class="kpi-sub">${viable?'Cuota ≤ 30%':'Cuota > 30%'}</div></div>
+    </div>
+    <div style="margin-top:10px">
+      <div class="info-row"><span class="info-label">Ingreso mínimo necesario (cuota inicial)</span><span class="info-value">${cop(ingMinCI)}/mes</span></div>
+      <div class="info-row"><span class="info-label">Ingreso mínimo necesario (crédito)</span><span class="info-value">${cop(ingMinCred)}/mes</span></div>
+      <div class="info-row"><span class="info-label">Costo total mensual como propietario</span><span class="info-value">${cop(costoMensB)}/mes</span></div>
+      <div class="info-row"><span class="info-label">Gastos escrituración estimados</span><span class="info-value">${cop(escDeseado)}</span></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">📊 Escenarios: Compara % de Cuota Inicial</div>
+    <table class="comp-table">
+      <thead><tr><th>Concepto</th><th>30% Inicial</th><th>40% Inicial</th><th>50% Inicial</th></tr></thead>
+      <tbody>
+        <tr><td>Valor máx. inmueble (Mod. A)</td>${escenarios.map(e=>`<td>${cop(valorMaxFin)}</td>`).join('')}</tr>
+        <tr><td>Cuota inicial ($)</td>${escenarios.map(e=>`<td>${cop(e.cI)}</td>`).join('')}</tr>
+        <tr><td>Ahorro mensual cuota inicial ($)</td>${escenarios.map(e=>`<td>${cop(e.aCI)}</td>`).join('')}</tr>
+        <tr><td>Cuota hipotecaria mensual ($)</td>${escenarios.map(e=>`<td>${cop(cuotaMax)}</td>`).join('')}</tr>
+        <tr><td>Costo total desembolsado ($)</td>${escenarios.map(e=>`<td>${cop(e.totalPag)}</td>`).join('')}</tr>
+        <tr><td>Valor inmueble a 10 años ($)</td>${escenarios.map(e=>`<td><strong style="color:var(--teal)">${cop(e.valF10)}</strong></td>`).join('')}</tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="resumen">
+    <div class="resumen-title">💬 Resumen Práctico</div>
+    <div class="resumen-body">
+      🏠 <strong>MODALIDAD A</strong> — Con ingresos de ${cop(ing)}/mes y regla del ${pctMax*100}%:<br>
+      🎯 Valor MÁXIMO: <strong class="highlight-pos">${cop(valorMaxFin)}</strong><br>
+      💵 Cuota inicial: ${cop(cuotaInicial)} (${pctCI*100}%) → <strong>${cop(ahorroMensCI)}/mes</strong> durante ${mCI} meses (${pct(ahorroMensCI/ing)} de ingresos)<br>
+      🏦 Crédito: ${cop(credito)} a ${anosHip} años → Cuota banco: <strong>${cop(cuotaMax)}/mes</strong> (${pct(pctMax)} de ingresos)<br>
+      📈 En ${anosHip} años, tu inmueble valdría <strong class="highlight-pos">${cop(valorFuturo)}</strong> → Ganancia neta: <strong class="highlight-pos">${cop(gananciaNet)}</strong> (${pct(gananciaNet/totalDesembolsado)} sobre lo invertido)<br><br>
+      🔄 <strong>MODALIDAD B</strong> — Para ${cop(deseado)}:<br>
+      💵 Cuota inicial: ${cop(ciDesB)} → <strong>${cop(ahorroMensB)}/mes</strong><br>
+      🏦 Crédito: ${cop(creditoB)} → Cuota: <strong>${cop(cuotaConSegB)}/mes</strong> (${pct(pctIngB)} de ingresos)<br>
+      ${viable?'✅ <strong class="highlight-pos">VIABLE</strong> — La cuota no supera el 30% recomendado.':'⚠️ <strong class="highlight-neg">NO VIABLE</strong> — La cuota supera el límite recomendado.'}
+    </div>
+  </div>`;
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+calc1();
+</script>
+</body>
+</html>
