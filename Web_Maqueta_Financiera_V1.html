@@ -438,30 +438,8 @@ function toast(msg, type='s') {
 // ══════════════════════════════════════════════════════
 // STATE + PERSISTENCE
 // ══════════════════════════════════════════════════════
-const DEFAULT_BUDGET = [
-  {id:1,tipo:'ing',cat:'Salario',nombre:'Salario principal',monto:8100000,freq:'Mensual',clase:'Fijo'},
-  {id:2,tipo:'ing',cat:'Primas',nombre:'Primas semestrales',monto:2500000,freq:'Semestral',clase:'Fijo'},
-  {id:3,tipo:'ing',cat:'Bonos',nombre:'Bono anual',monto:3240000,freq:'Anual',clase:'Variable'},
-  {id:4,tipo:'ing',cat:'Otros',nombre:'Otros ingresos',monto:1800000,freq:'Mensual',clase:'Variable'},
-  {id:5,tipo:'eg',cat:'Hogar',nombre:'Arriendo',monto:1800000,freq:'Mensual',clase:'Fijo'},
-  {id:6,tipo:'eg',cat:'Hogar',nombre:'Administración',monto:320000,freq:'Mensual',clase:'Fijo'},
-  {id:7,tipo:'eg',cat:'Hogar',nombre:'Servicios públicos',monto:250000,freq:'Mensual',clase:'Fijo'},
-  {id:8,tipo:'eg',cat:'Hogar',nombre:'Internet',monto:90000,freq:'Mensual',clase:'Fijo'},
-  {id:9,tipo:'eg',cat:'Hogar',nombre:'Predial',monto:4000000,freq:'Anual',clase:'Variable'},
-  {id:10,tipo:'eg',cat:'Alimentación',nombre:'Mercado',monto:600000,freq:'Mensual',clase:'Fijo'},
-  {id:11,tipo:'eg',cat:'Alimentación',nombre:'Restaurantes',monto:200000,freq:'Mensual',clase:'Variable'},
-  {id:12,tipo:'eg',cat:'Transporte',nombre:'Gasolina',monto:120000,freq:'Mensual',clase:'Fijo'},
-  {id:13,tipo:'eg',cat:'Transporte',nombre:'Seguro vehículo',monto:200000,freq:'Mensual',clase:'Fijo'},
-  {id:14,tipo:'eg',cat:'Salud',nombre:'Seguro médico',monto:300000,freq:'Mensual',clase:'Fijo'},
-  {id:15,tipo:'eg',cat:'Entretenimiento',nombre:'Suscripciones',monto:90000,freq:'Mensual',clase:'Fijo'},
-  {id:16,tipo:'eg',cat:'Entretenimiento',nombre:'Viajes / ocio',monto:500000,freq:'Mensual',clase:'Variable'},
-  {id:17,tipo:'eg',cat:'Créditos o Deudas',nombre:'Crédito auto',monto:450000,freq:'Mensual',clase:'Fijo'},
-];
-const DEFAULT_METAS = [
-  {id:1,nombre:'Casa propia — cuota inicial',cat:'🏠',total:30000000,actual:10200000,aporte:500000,plazo:'4 años'},
-  {id:2,nombre:'Viaje Europa',cat:'✈️',total:8000000,actual:4960000,aporte:200000,plazo:'3 años'},
-  {id:3,nombre:'Maestría',cat:'🎓',total:12000000,actual:4920000,aporte:150000,plazo:'5 años'},
-];
+const DEFAULT_BUDGET = [];
+const DEFAULT_METAS = [];
 
 function loadState() {
   try {
@@ -705,79 +683,122 @@ function renderPage(id) {
 // PAGE: DASHBOARD
 // ══════════════════════════════════════════════════════
 function renderDashboard() {
-  const ing  = [11.2,11.2,11.2,13.7,11.4,10.7,10.5,11.2,11.2,10,13,11.2];
-  const eg   = [5.1,12.3,8.1,5.3,8.1,5.8,5.1,5.3,5.1,5.3,5.1,5.3];
-  const meses= ['E','F','M','A','M','J','J','A','S','O','N','D'];
-  const maxV = Math.max(...ing);
-  const bars = ing.map((v,i) => `
+  // Calcular todo desde S (datos reales del usuario)
+  const txAll  = S.transactions;
+  const ingresos = txAll.filter(t=>t.tipo==='Ingreso');
+  const egresos  = txAll.filter(t=>t.tipo==='Egreso');
+  const totalIng = ingresos.reduce((a,t)=>a+t.monto,0);
+  const totalEg  = egresos.reduce((a,t)=>a+t.monto,0);
+  const flujoNeto = totalIng - totalEg;
+  const tasaAhorro = totalIng>0 ? flujoNeto/totalIng : 0;
+
+  // Presupuesto
+  const pptoIng = S.budget.filter(b=>b.tipo==='ing').reduce((a,b)=>a+b.monto,0);
+  const pptoEg  = S.budget.filter(b=>b.tipo==='eg').reduce((a,b)=>a+b.monto,0);
+
+  // Distribución gastos por categoría
+  const catMap = {};
+  egresos.forEach(t=>{ catMap[t.cat]=(catMap[t.cat]||0)+t.monto; });
+  const catEntries = Object.entries(catMap).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const COLORS = ['#388BFD','#2DA44E','#BC8CFF','#F85149','#D29922','#8B949E'];
+
+  // Chart: ingresos/egresos por mes (últimos 6 meses)
+  const now = new Date();
+  const meses6 = Array.from({length:6},(_,i)=>{
+    const d = new Date(now.getFullYear(), now.getMonth()-5+i, 1);
+    return { label: ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][d.getMonth()], mes: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}` };
+  });
+  const chartIng = meses6.map(m=>txAll.filter(t=>t.tipo==='Ingreso'&&t.fecha.startsWith(m.mes)).reduce((a,t)=>a+t.monto,0));
+  const chartEg  = meses6.map(m=>txAll.filter(t=>t.tipo==='Egreso' &&t.fecha.startsWith(m.mes)).reduce((a,t)=>a+t.monto,0));
+  const chartMax = Math.max(...chartIng,...chartEg,1);
+
+  const bars = meses6.map((m,i)=>`
     <div class="bar-grp">
-      <div class="bar bi" style="height:${(v/maxV)*100}%" title="Ing: ${M(v*1e6)}"></div>
-      <div class="bar be" style="height:${(eg[i]/maxV)*100}%" title="Eg: ${M(eg[i]*1e6)}"></div>
-      <div class="bar ba" style="height:${(Math.max(0,v-eg[i])/maxV)*100}%" title="Ahorro: ${M((v-eg[i])*1e6)}"></div>
+      <div class="bar bi" style="height:${Math.max(2,(chartIng[i]/chartMax)*100)}%" title="Ing: ${cop(chartIng[i])}"></div>
+      <div class="bar be" style="height:${Math.max(2,(chartEg[i]/chartMax)*100)}%"  title="Eg:  ${cop(chartEg[i])}"></div>
+      <div class="bar ba" style="height:${Math.max(2,(Math.max(0,chartIng[i]-chartEg[i])/chartMax)*100)}%" title="Ahorro: ${cop(Math.max(0,chartIng[i]-chartEg[i]))}"></div>
     </div>`).join('');
-  const lbls = meses.map(m=>`<div class="chart-lbl">${m}</div>`).join('');
-  const txCount = S.transactions.length;
-  const realIng = S.transactions.filter(t=>t.tipo==='Ingreso').reduce((a,t)=>a+t.monto,0);
-  const realEg  = S.transactions.filter(t=>t.tipo==='Egreso').reduce((a,t)=>a+t.monto,0);
+  const lbls = meses6.map(m=>`<div class="chart-lbl">${m.label}</div>`).join('');
+
+  // Semáforo — solo con datos reales
+  const semItems = [];
+  if(totalIng>0){
+    const ta = tasaAhorro;
+    semItems.push([`Tasa de ahorro`, `${(ta*100).toFixed(1)}%`, ta>=0.2?'sg':ta>=0.1?'sa':'sr', ta>=0.2?'≥20% ✓':'< 20% ⚠']);
+  }
+  if(pptoIng>0){
+    const ej = pptoIng>0?totalIng/pptoIng:0;
+    semItems.push([`Ingresos vs Ppto`,`${(ej*100).toFixed(0)}%`,ej>=0.9?'sg':ej>=0.7?'sa':'sr',ej>=0.9?'OK ✓':'Revisar ⚠']);
+  }
+  if(pptoEg>0){
+    const ej2 = pptoEg>0?totalEg/pptoEg:0;
+    semItems.push([`Gastos vs Ppto`,`${(ej2*100).toFixed(0)}%`,ej2<=1?'sg':ej2<=1.1?'sa':'sr',ej2<=1?'OK ✓':'Sobre ppto ✗']);
+  }
+  if(S.metas.length>0){
+    const avg = S.metas.reduce((a,m)=>a+m.actual/m.total,0)/S.metas.length;
+    semItems.push([`Avance metas`,`${(avg*100).toFixed(0)}%`,avg>=0.5?'sg':avg>=0.25?'sa':'sr','']);
+  }
+
+  const noData = txAll.length===0 && S.budget.length===0;
 
   $('main-content').innerHTML = `
-  <div class="alert aw">
-    <svg viewBox="0 0 20 20" fill="currentColor"><path d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"/></svg>
-    <span><strong>Alerta:</strong> Entretenimiento superó presupuesto en 18%. Fondo de emergencia: 3.8 meses (meta: 6).${txCount>0?` · <strong>${txCount} transacciones reales registradas.</strong>`:''}</span>
-  </div>
+  ${noData ? `
+  <div class="alert ai">
+    <svg viewBox="0 0 20 20" fill="currentColor"><path d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"/></svg>
+    <span>Aún no tienes datos. Empieza agregando tu presupuesto o registrando un movimiento.</span>
+  </div>` : ''}
   <div class="kpi-grid">
-    <div class="kpi cg"><div class="klbl">Ingresos planif./mes</div><div class="kval">${M(13740000)}</div><div class="kdel up">▲ +22% vs mar</div></div>
-    <div class="kpi cr"><div class="klbl">Gastos planif./mes</div><div class="kval">${M(5335000)}</div><div class="kdel fl">Presupuestado</div></div>
-    <div class="kpi cb"><div class="klbl">Ahorro planif./mes</div><div class="kval">${M(8405000)}</div><div class="kdel fl">61.2% tasa</div></div>
-    <div class="kpi ca"><div class="klbl">Transacciones reales</div><div class="kval">${txCount}</div><div class="kdel ${realIng-realEg>=0?'up':'dn'}">${txCount>0?cop(realIng-realEg)+' neto':'Agrega movimientos'}</div></div>
+    <div class="kpi cg"><div class="klbl">Ingresos registrados</div><div class="kval" style="font-size:${totalIng>0?'18px':'22px'}">${totalIng>0?cop(totalIng):'—'}</div><div class="kdel fl">${ingresos.length} movimiento(s)</div></div>
+    <div class="kpi cr"><div class="klbl">Egresos registrados</div><div class="kval" style="font-size:${totalEg>0?'18px':'22px'}">${totalEg>0?cop(totalEg):'—'}</div><div class="kdel fl">${egresos.length} movimiento(s)</div></div>
+    <div class="kpi ${flujoNeto>=0?'cb':'cr'}"><div class="klbl">Flujo neto</div><div class="kval" style="font-size:${flujoNeto!==0?'18px':'22px'}">${txAll.length>0?cop(flujoNeto):'—'}</div><div class="kdel ${flujoNeto>=0?'up':'dn'}">${txAll.length>0?(flujoNeto>=0?'Positivo':'Negativo'):'Sin movimientos'}</div></div>
+    <div class="kpi ca"><div class="klbl">Tasa de ahorro</div><div class="kval">${totalIng>0?((tasaAhorro)*100).toFixed(1)+'%':'—'}</div><div class="kdel fl">${S.budget.length} ítems en ppto</div></div>
   </div>
   <div class="row32">
     <div class="panel">
       <div class="ph">
-        <span class="ptitle">Ingresos · Gastos · Ahorro — 2026</span>
+        <span class="ptitle">Ingresos · Egresos · Ahorro — últimos 6 meses</span>
         <div class="legend">
           <div class="li"><div class="ld" style="background:var(--accent)"></div>Ingresos</div>
-          <div class="li"><div class="ld" style="background:var(--red)"></div>Gastos</div>
+          <div class="li"><div class="ld" style="background:var(--red)"></div>Egresos</div>
           <div class="li"><div class="ld" style="background:var(--blue)"></div>Ahorro</div>
         </div>
       </div>
-      <div class="chart-area">${bars}</div>
-      <div class="chart-lbls">${lbls}</div>
+      ${chartMax<=1
+        ? `<div class="empty" style="padding:30px 0"><div class="empty-icon">📊</div><p>Sin movimientos aún</p><small>Agrega transacciones para ver el gráfico</small></div>`
+        : `<div class="chart-area">${bars}</div><div class="chart-lbls">${lbls}</div>`}
     </div>
     <div class="panel">
       <div class="ph"><span class="ptitle">Semáforo financiero</span></div>
-      ${[['Tasa de ahorro','61.2%','sg','≥20% ✓'],
-         ['Fondo emergencia','3.8 m','sa','<6m ⚠'],
-         ['Deuda/Ingreso','8.3%','sg','<30% ✓'],
-         ['Ppto Hogar','95%','sg','OK ✓'],
-         ['Entretenimiento','118%','sr','>100% ✗'],
-         ['Flujo neto año','$16.4M','sg','Positivo ✓'],
-        ].map(([l,v,s,d])=>`
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)">
-          <span style="font-size:11px;color:var(--text3)">${l}</span>
-          <div style="display:flex;align-items:center;gap:8px">
-            <span class="sem ${s}">${v}</span>
-            <span style="font-size:10px;color:var(--text3)">${d}</span>
-          </div>
-        </div>`).join('')}
+      ${semItems.length===0
+        ? `<div class="empty" style="padding:20px 0"><div class="empty-icon">🚦</div><p>Sin datos suficientes</p><small>Agrega presupuesto y movimientos</small></div>`
+        : semItems.map(([l,v,s,d])=>`
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
+            <span style="font-size:11px;color:var(--text3)">${l}</span>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="sem ${s}">${v}</span>
+              <span style="font-size:10px;color:var(--text3)">${d}</span>
+            </div>
+          </div>`).join('')}
     </div>
   </div>
   <div class="row2">
     <div class="panel">
-      <div class="ph"><span class="ptitle">Distribución de gastos</span></div>
-      ${[['Hogar','#388BFD',47],['Alimentación','#2DA44E',18],['Transporte','#BC8CFF',10],['Entretenimiento','#F85149',11],['Créditos','#D29922',8],['Otros','#8B949E',6]].map(([n,c,p])=>`
-        <div style="margin-bottom:8px">
-          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
-            <span style="color:var(--text2)">${n}</span>
-            <span style="color:${c};font-weight:600">${p}%</span>
-          </div>
-          <div class="pt"><div class="pf" style="width:${p}%;background:${c}"></div></div>
-        </div>`).join('')}
+      <div class="ph"><span class="ptitle">Distribución de egresos</span></div>
+      ${catEntries.length===0
+        ? `<div class="empty" style="padding:20px 0"><div class="empty-icon">🗂</div><p>Sin egresos registrados</p></div>`
+        : catEntries.map(([cat,monto],i)=>`
+          <div style="margin-bottom:8px">
+            <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
+              <span style="color:var(--text2)">${cat}</span>
+              <span style="color:${COLORS[i]};font-weight:600">${totalEg>0?((monto/totalEg)*100).toFixed(1):'0'}%</span>
+            </div>
+            <div class="pt"><div class="pf" style="width:${totalEg>0?(monto/totalEg)*100:0}%;background:${COLORS[i]}"></div></div>
+          </div>`).join('')}
     </div>
     <div class="panel">
       <div class="ph"><span class="ptitle">Acciones rápidas</span></div>
       <div style="display:flex;flex-direction:column;gap:8px">
-        <button class="btn btn-p" style="justify-content:center" onclick="nav('ia',null)">✨ Clasificar movimiento con IA</button>
+        <button class="btn btn-p" style="justify-content:center" onclick="nav('ia',null)">✨ Clasificar movimiento</button>
         <button class="btn" style="justify-content:center" onclick="openModal('new-tx')">+ Nueva transacción manual</button>
         <button class="btn" style="justify-content:center" onclick="openModal('add-item')">+ Agregar ítem al presupuesto</button>
         <button class="btn" style="justify-content:center" onclick="openModal('add-meta')">🎯 Nueva meta financiera</button>
@@ -1096,42 +1117,69 @@ function renderRegistro() {
 // PAGE: MONITOREO
 // ══════════════════════════════════════════════════════
 function renderMonitoreo() {
-  const cats = ['Hogar','Alimentación','Transporte','Salud','Entretenimiento','Créditos o Deudas'];
-  const ppto = {Hogar:2525000,Alimentación:950000,Transporte:320000,Salud:300000,Entretenimiento:590000,'Créditos o Deudas':450000};
+  // Construir ppto desde S.budget (datos reales del usuario)
+  const ppto = {};
+  S.budget.filter(b=>b.tipo==='eg').forEach(b=>{
+    ppto[b.cat] = (ppto[b.cat]||0) + b.monto;
+  });
+
+  // Real desde transacciones
   const real = {};
-  S.transactions.filter(t=>t.tipo==='Egreso').forEach(t=>{ real[t.cat]=(real[t.cat]||0)+t.monto; });
+  S.transactions.filter(t=>t.tipo==='Egreso').forEach(t=>{
+    real[t.cat] = (real[t.cat]||0) + t.monto;
+  });
+
+  // Unión de todas las categorías con datos
+  const cats = [...new Set([...Object.keys(ppto),...Object.keys(real)])].sort();
+
   const totalPpto = Object.values(ppto).reduce((a,b)=>a+b,0);
   const totalReal = Object.values(real).reduce((a,b)=>a+b,0);
-  const alertas = cats.filter(c=>((real[c]||0)/ppto[c])>1).length;
+  const alertas   = cats.filter(c=>real[c]>0 && ppto[c]>0 && real[c]/ppto[c]>1).length;
+
+  const noData = cats.length === 0;
 
   $('main-content').innerHTML = `
   <div class="kpi-grid">
-    <div class="kpi cg"><div class="klbl">Presupuesto gastos</div><div class="kval" style="font-size:18px">${cop(totalPpto)}</div></div>
-    <div class="kpi cr"><div class="klbl">Ejecutado real</div><div class="kval" style="font-size:18px">${cop(totalReal)}</div></div>
+    <div class="kpi cg"><div class="klbl">Presupuesto gastos</div><div class="kval" style="font-size:18px">${totalPpto>0?cop(totalPpto):'—'}</div></div>
+    <div class="kpi cr"><div class="klbl">Ejecutado real</div><div class="kval" style="font-size:18px">${totalReal>0?cop(totalReal):'—'}</div></div>
     <div class="kpi cb"><div class="klbl">Movimientos reales</div><div class="kval">${S.transactions.filter(t=>t.tipo==='Egreso').length}</div></div>
     <div class="kpi ca"><div class="klbl">Categorías en alerta</div><div class="kval">${alertas}</div></div>
   </div>
   <div class="panel">
     <div class="ph"><span class="ptitle">Ejecución vs Presupuesto</span></div>
-    ${cats.map(cat=>{
-      const r=real[cat]||0, p=ppto[cat]||1;
-      const e=r/p;
-      const cl=e>1?'var(--red)':e>0.85?'var(--amber)':'var(--accent)';
-      const sc=e>1?'sr':e>0.85?'sa':'sg';
-      return `<div style="margin-bottom:12px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-          <span style="font-size:12px;color:var(--text)">${cat}</span>
-          <div style="display:flex;align-items:center;gap:8px">
-            <span style="font-size:11px;color:var(--text3)">${cop(r)} / ${cop(p)}</span>
-            <span class="sem ${sc}">${pct(e)} ${e>1?'⚠':e>0.85?'~':'✓'}</span>
+    ${noData
+      ? `<div class="empty" style="padding:30px">
+          <div class="empty-icon">📊</div>
+          <p>Sin datos para monitorear</p>
+          <small>Agrega gastos en tu presupuesto y registra transacciones para ver la comparativa.</small>
+          <div style="display:flex;gap:8px;justify-content:center;margin-top:12px">
+            <button class="btn btn-p" onclick="nav('presupuesto',null)">+ Ir al presupuesto</button>
+            <button class="btn" onclick="nav('registro',null)">+ Registrar movimiento</button>
           </div>
-        </div>
-        <div class="pt"><div class="pf" style="width:${Math.min(100,e*100)}%;background:${cl}"></div></div>
-      </div>`;
-    }).join('')}
+        </div>`
+      : cats.map(cat=>{
+          const r = real[cat]||0;
+          const p = ppto[cat]||0;
+          const hayPpto = p > 0;
+          const hayReal = r > 0;
+          const ejec = hayPpto && hayReal ? r/p : hayReal ? null : 0;
+          const cl  = ejec===null?'var(--blue)':ejec>1?'var(--red)':ejec>0.85?'var(--amber)':'var(--accent)';
+          const sc  = ejec===null?'sb':ejec>1?'sr':ejec>0.85?'sa':'sg';
+          const lbl = ejec===null?'Sin ppto':hayPpto&&!hayReal?'Sin ejecutar':`${((ejec||0)*100).toFixed(0)}% ${ejec>1?'⚠':ejec>0.85?'~':'✓'}`;
+          return `<div style="margin-bottom:12px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+              <span style="font-size:12px;color:var(--text)">${cat}</span>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:11px;color:var(--text3)">${cop(r)} ${hayPpto?'/ '+cop(p):''}</span>
+                <span class="sem ${sc}">${lbl}</span>
+              </div>
+            </div>
+            <div class="pt"><div class="pf" style="width:${Math.min(100,(hayPpto&&r?r/p*100:0))}%;background:${cl}"></div></div>
+          </div>`;
+        }).join('')}
     <div class="alert ai" style="margin-top:8px;margin-bottom:0">
       <svg viewBox="0 0 20 20" fill="currentColor"><path d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"/></svg>
-      <span>Los valores ejecutados vienen de tus transacciones reales. Agrégalas en Registro o vía Clasificador IA.</span>
+      <span>Los valores ejecutados vienen de tus transacciones. El presupuesto viene de los ítems que defines en <strong>Presupuesto</strong>.</span>
     </div>
   </div>`;
 }
