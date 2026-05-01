@@ -829,49 +829,128 @@ function renderIA() {
   </div>`;
 }
 
-async function clasificarIA() {
+// ── CLASIFICADOR LOCAL (sin API — funciona offline y en GitHub Pages) ──
+const REGLAS = [
+  // INGRESOS
+  {p:/salario|sueldo|n[oó]mina|pago.*mes|mes.*pago/i,          t:'Ingreso',c:'Salario',       s:'Salario mensual',     cl:'Fijo',   conf:95},
+  {p:/prima|cesant|vacaci[oó]n|liquidaci[oó]n/i,               t:'Ingreso',c:'Primas',        s:'Prima/Cesantías',     cl:'Variable',conf:92},
+  {p:/bono|comisi[oó]n|incentivo|extra/i,                      t:'Ingreso',c:'Bonos',         s:'Bono/Comisión',       cl:'Variable',conf:88},
+  {p:/freelance|proyecto|honorario|factura|cobr[oé]/i,         t:'Ingreso',c:'Otros',         s:'Ingreso freelance',   cl:'Variable',conf:85},
+  {p:/arrend[oó]|canon|alquiler.*recib|ingreso.*alquiler/i,    t:'Ingreso',c:'Otros',         s:'Arriendo recibido',   cl:'Fijo',   conf:88},
+  {p:/dividend|inversi[oó]n.*rendim|intereses.*recib/i,        t:'Ingreso',c:'Otros',         s:'Rendimientos',        cl:'Variable',conf:82},
+  {p:/venta|vend[íi]|vendi[óo]/i,                             t:'Ingreso',c:'Otros',         s:'Venta',               cl:'Variable',conf:75},
+  {p:/transfer.*recib|me.*consign|me.*transfiri|recib.*plata/i,t:'Ingreso',c:'Otros',        s:'Transferencia recibida',cl:'Variable',conf:72},
+
+  // HOGAR
+  {p:/arrend[oó]|arriendo|canon|alquiler|pag.*arriendo/i,     t:'Egreso', c:'Hogar',         s:'Arriendo',            cl:'Fijo',   conf:97},
+  {p:/admin|administraci[oó]n.*edificio|cuota.*coprop/i,      t:'Egreso', c:'Hogar',         s:'Administración',      cl:'Fijo',   conf:94},
+  {p:/predial|impuesto.*predio|catastro/i,                    t:'Egreso', c:'Hogar',         s:'Predial',             cl:'Variable',conf:96},
+  {p:/gas|energia|acueducto|alcantarillado|epm|codensa|naturgas|servicios p[úu]blicos/i,t:'Egreso',c:'Hogar',s:'Servicios públicos',cl:'Variable',conf:93},
+  {p:/internet|wifi|claro|tigo|movistar.*plan|fibra/i,        t:'Egreso', c:'Hogar',         s:'Internet',            cl:'Fijo',   conf:92},
+  {p:/tv.*cable|cable|directv|claro.*tv|netflix.*hogar/i,     t:'Egreso', c:'Hogar',         s:'TV/Cable',            cl:'Fijo',   conf:88},
+  {p:/mueble|nevera|lavadora|electrodom[eé]st|horno|microondas/i,t:'Egreso',c:'Hogar',      s:'Electrodomésticos',   cl:'Variable',conf:85},
+
+  // ALIMENTACIÓN
+  {p:/mercado|supermercado|xito|[eé]xito|carulla|jumbo|merca/i,t:'Egreso',c:'Alimentación', s:'Mercado',             cl:'Variable',conf:95},
+  {p:/restaurante|almuerzo|comida|cena|desayuno|men[uú]|hamburguesa|pizza|sushi/i,t:'Egreso',c:'Alimentación',s:'Restaurante',cl:'Variable',conf:90},
+  {p:/caf[eé]|tinto|bebida|starbucks|juan.*valdez/i,          t:'Egreso', c:'Alimentación',  s:'Café/Bebidas',        cl:'Variable',conf:88},
+  {p:/delivery|domicilio|rappi|ifood|uber.*eat|dominos/i,     t:'Egreso', c:'Alimentación',  s:'Domicilio',           cl:'Variable',conf:93},
+  {p:/frutas|verduras|carne|pollo|pescado|pan|l[aá]cteos/i,   t:'Egreso', c:'Alimentación',  s:'Mercado',             cl:'Variable',conf:85},
+
+  // TRANSPORTE
+  {p:/gasolina|combustible|bp|terpel|biomax|carburante/i,     t:'Egreso', c:'Transporte',    s:'Gasolina',            cl:'Variable',conf:97},
+  {p:/soat/i,                                                  t:'Egreso', c:'Transporte',    s:'Soat',                cl:'Variable',conf:99},
+  {p:/seguro.*carro|seguro.*vehic|poliza.*auto/i,             t:'Egreso', c:'Transporte',    s:'Seguro vehículo',     cl:'Fijo',   conf:94},
+  {p:/tecnicomec[aá]nica|revisi[oó]n.*carro|mantenimiento.*carro/i,t:'Egreso',c:'Transporte',s:'Mantenimiento vehículo',cl:'Variable',conf:92},
+  {p:/taxi|uber|cabify|indriver|beat/i,                       t:'Egreso', c:'Transporte',    s:'Taxi/Uber',           cl:'Variable',conf:95},
+  {p:/transmilenio|sitp|metro|bus|pasaje|transporte p[uú]blico/i,t:'Egreso',c:'Transporte', s:'Transporte público',  cl:'Variable',conf:92},
+  {p:/peaje|peajes/i,                                          t:'Egreso', c:'Transporte',    s:'Peajes',              cl:'Variable',conf:98},
+  {p:/parqueadero|parking|estacionamiento/i,                  t:'Egreso', c:'Transporte',    s:'Parqueadero',         cl:'Variable',conf:93},
+
+  // SALUD
+  {p:/m[eé]dico|cl[íi]nica|hospital|consulta|cita m[eé]d/i,  t:'Egreso', c:'Salud',         s:'Consulta médica',     cl:'Variable',conf:93},
+  {p:/medicamento|farmacia|drogueria|droga|pastilla|medicina/i,t:'Egreso',c:'Salud',         s:'Medicamentos',        cl:'Variable',conf:94},
+  {p:/eps|medicina prepagada|seguro m[eé]dic|salud/i,         t:'Egreso', c:'Salud',         s:'EPS/Seguro médico',   cl:'Fijo',   conf:88},
+  {p:/gym|gimnasio|deporte|piscina|entrenamiento/i,           t:'Egreso', c:'Salud',         s:'Gimnasio',            cl:'Fijo',   conf:88},
+  {p:/odont[oó]logo|dentista|diente|muela|ortodoncia/i,       t:'Egreso', c:'Salud',         s:'Odontología',         cl:'Variable',conf:95},
+
+  // ENTRETENIMIENTO
+  {p:/netflix|spotify|disney|amazon prime|hbo|apple.*tv|paramount/i,t:'Egreso',c:'Entretenimiento',s:'Suscripciones streaming',cl:'Fijo',conf:97},
+  {p:/cine|boleta|pelicula|teatro|concierto|evento/i,         t:'Egreso', c:'Entretenimiento',s:'Cine/Eventos',        cl:'Variable',conf:93},
+  {p:/salida|plan|rumbear|bar|discoteca|copa|licor|cerveza/i, t:'Egreso', c:'Entretenimiento',s:'Salidas/Ocio',        cl:'Variable',conf:88},
+  {p:/viaje|hotel|vuelo|airbnb|booking|tiquete/i,             t:'Egreso', c:'Entretenimiento',s:'Viaje',               cl:'Variable',conf:88},
+  {p:/videojuego|steam|playstation|xbox|nintendo/i,           t:'Egreso', c:'Entretenimiento',s:'Videojuegos',         cl:'Variable',conf:92},
+
+  // EDUCACIÓN
+  {p:/matr[íi]cula|pensi[oó]n.*colegio|universidad|colegio|instituto/i,t:'Egreso',c:'Educación',s:'Matrícula',        cl:'Fijo',   conf:93},
+  {p:/curso|taller|capacitaci[oó]n|certificado|udemy|coursera/i,t:'Egreso',c:'Educación',   s:'Curso/Capacitación',  cl:'Variable',conf:90},
+  {p:/libro|texto.*escolar|material.*estudio/i,               t:'Egreso', c:'Educación',     s:'Material educativo',  cl:'Variable',conf:85},
+
+  // CRÉDITOS
+  {p:/cr[eé]dito|cuota.*cr[eé]dito|pr[eé]stamo|deuda|banco/i,t:'Egreso', c:'Créditos o Deudas',s:'Cuota crédito',   cl:'Fijo',   conf:88},
+  {p:/tarjeta.*cr[eé]dito|pago.*tarjeta|tc /i,               t:'Egreso', c:'Créditos o Deudas',s:'Tarjeta de crédito',cl:'Variable',conf:85},
+  {p:/cuota.*carro|cr[eé]dito.*veh[íi]culo|leasing/i,        t:'Egreso', c:'Créditos o Deudas',s:'Cuota vehículo',   cl:'Fijo',   conf:92},
+  {p:/hipoteca|cr[eé]dito.*vivienda|cuota.*apartamento/i,    t:'Egreso', c:'Créditos o Deudas',s:'Hipoteca',         cl:'Fijo',   conf:94},
+
+  // FAMILIA
+  {p:/mesada|bolsillo.*hijo|colegio.*hijo|niñero|guarderia/i, t:'Egreso', c:'Familia',        s:'Gastos familia',     cl:'Variable',conf:85},
+  {p:/regalo|cumpleaños|navidad|amor.*amistad/i,              t:'Egreso', c:'Familia',        s:'Regalo',             cl:'Variable',conf:82},
+
+  // DEFAULT
+  {p:/.*/,                                                     t:'Egreso', c:'Otros',         s:'Sin clasificar',      cl:'Variable',conf:40},
+];
+
+function clasificarLocal(texto) {
+  for (const r of REGLAS) {
+    if (r.p.test(texto)) {
+      return {
+        tipo: r.t, categoria: r.c, subcategoria: r.s,
+        clase: r.cl, confianza: r.conf,
+        explicacion: `Clasificado por palabras clave detectadas en la descripción.`
+      };
+    }
+  }
+}
+
+function clasificarIA() {
   const texto = $('ai-input')?.value.trim();
   if (!texto) { toast('Escribe una descripción primero','e'); return; }
+
   const zone = $('ai-zone');
-  zone.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:14px;background:var(--bg3);border-radius:8px;margin-top:10px;font-size:12px;color:var(--text3)"><div class="spinner"></div>Analizando "${texto}"...</div>`;
-  try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:400,
-        messages:[{role:'user', content:`Eres un experto en finanzas personales colombianas. Clasifica este movimiento financiero.
+  // Simula procesamiento breve
+  zone.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--bg3);border-radius:8px;margin-top:10px;font-size:12px;color:var(--text3)"><div class="spinner"></div>Clasificando "${texto.substring(0,40)}..."</div>`;
 
-Descripción: "${texto}"
-
-Responde SOLO con JSON puro (sin backticks, sin markdown):
-{
-  "tipo": "Egreso" o "Ingreso",
-  "categoria": exactamente una de: "Hogar", "Alimentación", "Transporte", "Salud", "Entretenimiento", "Educación", "Familia", "Créditos o Deudas", "Salario", "Primas", "Bonos", "Otros",
-  "subcategoria": "nombre específico (Arriendo, Netflix, Gasolina, Cine, etc.)",
-  "clase": "Fijo" o "Variable",
-  "confianza": número 0-100,
-  "explicacion": "frase corta máx 12 palabras"
-}`}]
-      })
-    });
-    const data = await resp.json();
-    const raw = data.content?.[0]?.text || '';
-    const result = JSON.parse(raw.replace(/```json|```/g,'').trim());
-    // Store in module-level var — NO JSON through onclick
+  setTimeout(() => {
+    const result = clasificarLocal(texto);
     window._aiResult = result;
+
     const confColor = result.confianza>=85?'var(--accent2)':result.confianza>=60?'var(--amber)':'var(--red)';
+    const confMsg   = result.confianza>=85?'Alta':'Media';
+
     zone.innerHTML = `
     <div class="ai-result-box">
       <div class="air-grid">
-        <div class="air-item"><div class="air-lbl">Tipo</div><div class="air-val"><span class="sem ${result.tipo==='Ingreso'?'sg':'sr'}">${result.tipo}</span></div></div>
-        <div class="air-item"><div class="air-lbl">Categoría</div><div class="air-val">${result.categoria}</div><div style="font-size:10px;color:var(--text3)">${result.subcategoria}</div></div>
-        <div class="air-item"><div class="air-lbl">Clase · Confianza</div><div class="air-val">${result.clase}</div><div style="font-size:10px;font-weight:600;color:${confColor}">${result.confianza}%</div></div>
+        <div class="air-item">
+          <div class="air-lbl">Tipo</div>
+          <div class="air-val"><span class="sem ${result.tipo==='Ingreso'?'sg':'sr'}">${result.tipo}</span></div>
+        </div>
+        <div class="air-item">
+          <div class="air-lbl">Categoría</div>
+          <div class="air-val">${result.categoria}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px">${result.subcategoria}</div>
+        </div>
+        <div class="air-item">
+          <div class="air-lbl">Clase · Confianza</div>
+          <div class="air-val">${result.clase}</div>
+          <div style="font-size:10px;font-weight:600;color:${confColor};margin-top:2px">${result.confianza}% — ${confMsg}</div>
+        </div>
       </div>
-      <div style="font-size:11px;color:var(--text2);background:var(--bg2);border-radius:6px;padding:8px;margin-bottom:10px;border-left:2px solid var(--blue)">💡 ${result.explicacion}</div>
+      <div style="font-size:11px;color:var(--text2);background:var(--bg2);border-radius:6px;padding:8px;margin-bottom:10px;border-left:2px solid var(--blue)">
+        💡 ${result.explicacion}
+        ${result.confianza<70?'<br><span style="color:var(--amber)">⚠ Baja confianza — revisa la categoría antes de guardar.</span>':''}
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-        <div class="field"><label>Monto ($)</label><input type="number" id="ia-monto" placeholder="Ingresa el monto" min="0"></div>
+        <div class="field"><label>Monto ($)</label><input type="number" id="ia-monto" placeholder="Ingresa el monto" min="0" autofocus></div>
         <div class="field"><label>Fecha</label><input type="date" id="ia-fecha" value="${today()}"></div>
       </div>
       <div style="display:flex;gap:8px">
@@ -879,9 +958,7 @@ Responde SOLO con JSON puro (sin backticks, sin markdown):
         <button class="btn" onclick="$('ai-zone').innerHTML='';$('ai-input').value=''">Descartar</button>
       </div>
     </div>`;
-  } catch(err) {
-    zone.innerHTML = `<div class="alert ar" style="margin-top:10px"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"/></svg><span>Error al clasificar: ${err.message}</span></div>`;
-  }
+  }, 400); // small delay for UX feel
 }
 
 function confirmarIA() {
